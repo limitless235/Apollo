@@ -1,0 +1,60 @@
+import Database from "better-sqlite3";
+import { drizzle } from "drizzle-orm/better-sqlite3";
+import * as schema from "./schema";
+
+const globalForDb = globalThis as unknown as {
+  sqlite?: Database.Database;
+  db?: ReturnType<typeof drizzle>;
+};
+
+function getSqlite() {
+  if (!globalForDb.sqlite) {
+    const path = process.env.DATABASE_PATH ?? "./apollo.db";
+    globalForDb.sqlite = new Database(path);
+    globalForDb.sqlite.pragma("journal_mode = WAL");
+  }
+  return globalForDb.sqlite;
+}
+
+export function getDb() {
+  if (!globalForDb.db) {
+    globalForDb.db = drizzle(getSqlite(), { schema });
+  }
+  return globalForDb.db;
+}
+
+export function initDb() {
+  const sqlite = getSqlite();
+  sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS articles (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      url TEXT NOT NULL UNIQUE,
+      title TEXT NOT NULL,
+      summary TEXT,
+      source TEXT,
+      published_at INTEGER NOT NULL,
+      symbols TEXT NOT NULL DEFAULT '[]',
+      sentiment_score REAL NOT NULL DEFAULT 0,
+      fetched_at INTEGER NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS daily_sentiment (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      symbol TEXT NOT NULL,
+      date TEXT NOT NULL,
+      avg_sentiment REAL NOT NULL DEFAULT 0,
+      article_count INTEGER NOT NULL DEFAULT 0,
+      bullish_count INTEGER NOT NULL DEFAULT 0,
+      bearish_count INTEGER NOT NULL DEFAULT 0,
+      UNIQUE(symbol, date)
+    );
+    CREATE TABLE IF NOT EXISTS watchlist (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      symbol TEXT NOT NULL UNIQUE,
+      company_name TEXT NOT NULL,
+      added_at INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_articles_published ON articles(published_at);
+    CREATE INDEX IF NOT EXISTS idx_daily_sentiment_symbol ON daily_sentiment(symbol, date);
+  `);
+  return getDb();
+}
