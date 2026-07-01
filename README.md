@@ -28,12 +28,14 @@ npm run dev
 | `npm run dev` | Start dev server |
 | `npm run db:seed` | Seed watchlist with NIFTY 50 |
 | `npm run ingest` | Pull news for all watchlist symbols |
+| `npm run eval:signals` | Walk-forward backtest of signal scores |
 | `npm run build` | Production build |
 
 ## API routes
 
 - `GET /api/watchlist` — List watchlist
-- `GET /api/watchlist/summary` — Watchlist with price change, sentiment, news count
+- `GET /api/signals` — Ranked watchlist signals (momentum + sentiment + news)
+- `GET /api/signals/[symbol]` — Signal breakdown + 1y backtest metrics for one symbol
 - `GET /api/charts/[symbol]` — OHLCV, news markers, sentiment timeline
 - `GET /api/news?symbol=RELIANCE` — Articles for symbol
 - `POST /api/chat` — Streaming agent chat

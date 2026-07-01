@@ -1,15 +1,22 @@
 import { Card, CardContent } from "@/components/ui/card";
+import type { SignalLabel } from "@/lib/scoring/composite";
 
 export function StatChips({
   latestClose,
   changePercent,
   avgSentiment,
   newsCount,
+  signal,
 }: {
   latestClose: number | null;
   changePercent: number;
   avgSentiment: number;
   newsCount: number;
+  signal?: {
+    score: number;
+    rank: number;
+    label: SignalLabel;
+  } | null;
 }) {
   const chips = [
     {
@@ -32,6 +39,24 @@ export function StatChips({
             : "text-amber-400",
     },
     { label: "Articles", value: String(newsCount) },
+    ...(signal
+      ? [
+          {
+            label: "Signal",
+            value: signal.label,
+            color:
+              signal.score >= 0.08
+                ? "text-emerald-400"
+                : signal.score <= -0.08
+                  ? "text-rose-400"
+                  : "text-amber-400",
+          },
+          {
+            label: "Rank",
+            value: `#${signal.rank}`,
+          },
+        ]
+      : []),
   ];
 
   return (

@@ -4,6 +4,8 @@ import { useCallback, useEffect, useState } from "react";
 import { WatchlistStrip, type WatchlistCard } from "@/components/dashboard/WatchlistStrip";
 import { SymbolSearch } from "@/components/dashboard/SymbolSearch";
 import { StatChips } from "@/components/dashboard/StatChips";
+import { SignalBreakdown, SignalBadge } from "@/components/dashboard/SignalPanel";
+import type { FeatureContribution, SignalLabel } from "@/lib/scoring/composite";
 import { NewsFeed, type NewsArticle } from "@/components/dashboard/NewsFeed";
 import { PriceChart } from "@/components/charts/PriceChart";
 import { SentimentChart } from "@/components/charts/SentimentChart";
@@ -50,11 +52,64 @@ export function Dashboard() {
   const [chartLoading, setChartLoading] = useState(false);
   const [ingesting, setIngesting] = useState(false);
 
+  const [signalDetail, setSignalDetail] = useState<{
+    score: number;
+    rank: number;
+    label: SignalLabel;
+    flags: string[];
+    breakdown: FeatureContribution[];
+    backtest?: {
+      ic: number;
+      directionalAccuracy: number;
+      days: number;
+    };
+  } | null>(null);
+
   const loadWatchlist = useCallback(async () => {
-    const res = await fetch("/api/watchlist/summary");
+    const res = await fetch("/api/signals");
     const data = await res.json();
-    setWatchlist(data.items ?? []);
+    setWatchlist(
+      (data.items ?? []).map(
+        (item: {
+          symbol: string;
+          companyName: string;
+          changePercent: number;
+          score: number;
+          rank: number;
+          label: SignalLabel;
+          flags: string[];
+          features: { avgSentiment7d: number; newsCount7d: number };
+        }) => ({
+          symbol: item.symbol,
+          companyName: item.companyName,
+          changePercent: item.changePercent,
+          avgSentiment: item.features.avgSentiment7d,
+          newsCount: item.features.newsCount7d,
+          score: item.score,
+          rank: item.rank,
+          label: item.label,
+          flags: item.flags,
+        })
+      )
+    );
     setLoading(false);
+  }, []);
+
+  const loadSignalDetail = useCallback(async (symbol: string) => {
+    const res = await fetch(`/api/signals/${symbol}`);
+    if (!res.ok) {
+      setSignalDetail(null);
+      return;
+    }
+    const data = await res.json();
+    setSignalDetail({
+      score: data.score,
+      rank: data.rank,
+      label: data.label,
+      flags: data.flags ?? [],
+      breakdown: data.breakdown ?? [],
+      backtest: data.backtest,
+    });
   }, []);
 
   const loadChart = useCallback(async (symbol: string) => {
@@ -78,8 +133,11 @@ export function Dashboard() {
   }, [loadWatchlist]);
 
   useEffect(() => {
-    if (selected) loadChart(selected);
-  }, [selected, loadChart]);
+    if (selected) {
+      loadChart(selected);
+      loadSignalDetail(selected);
+    }
+  }, [selected, loadChart, loadSignalDetail]);
 
   const handleAddWatchlist = async (symbol: string) => {
     await fetch("/api/watchlist", {
@@ -106,6 +164,7 @@ export function Dashboard() {
       await fetch("/api/cron/ingest-news");
       await loadWatchlist();
       await loadChart(selected);
+      await loadSignalDetail(selected);
     } finally {
       setIngesting(false);
     }
@@ -170,14 +229,44 @@ export function Dashboard() {
           )}
         </section>
 
-        {/* Stats row */}
-        <section className="px-4 py-3 lg:px-6">
+        {/* Stats + signal row */}
+        <section className="flex flex-col gap-3 px-4 py-3 lg:px-6">
           <StatChips
             latestClose={latestClose}
             changePercent={changePercent}
             avgSentiment={avgSentiment}
             newsCount={articles.length}
+            signal={signalDetail}
           />
+          {signalDetail && (
+            <Card className="border-white/[0.08] bg-white/[0.02]">
+              <CardHeader className="pb-2">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <CardTitle className="text-sm font-medium text-white/80">
+                    Signal breakdown
+                  </CardTitle>
+                  <SignalBadge
+                    label={signalDetail.label}
+                    score={signalDetail.score}
+                    rank={signalDetail.rank}
+                  />
+                </div>
+                {signalDetail.backtest && signalDetail.backtest.days > 0 && (
+                  <p className="text-[11px] text-white/35">
+                    1y backtest: IC {signalDetail.backtest.ic.toFixed(3)} · DA{" "}
+                    {(signalDetail.backtest.directionalAccuracy * 100).toFixed(1)}% ·{" "}
+                    {signalDetail.backtest.days} days
+                  </p>
+                )}
+              </CardHeader>
+              <CardContent className="pt-0">
+                <SignalBreakdown
+                  breakdown={signalDetail.breakdown}
+                  flags={signalDetail.flags}
+                />
+              </CardContent>
+            </Card>
+          )}
         </section>
 
         {/* Main grid: chart + news */}

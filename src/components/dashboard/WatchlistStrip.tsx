@@ -4,6 +4,8 @@ import { useAutoAnimate } from "@formkit/auto-animate/react";
 import { cn } from "@/lib/utils";
 import { NumberTicker } from "@/components/magicui/number-ticker";
 import { SentimentPill } from "@/components/dashboard/sentiment-pill";
+import { SignalBadge } from "@/components/dashboard/SignalPanel";
+import type { SignalLabel } from "@/lib/scoring/composite";
 
 export interface WatchlistCard {
   symbol: string;
@@ -11,6 +13,10 @@ export interface WatchlistCard {
   changePercent: number;
   avgSentiment: number;
   newsCount: number;
+  score?: number;
+  rank?: number;
+  label?: SignalLabel;
+  flags?: string[];
 }
 
 export function WatchlistStrip({
@@ -18,13 +24,19 @@ export function WatchlistStrip({
   selected,
   onSelect,
   onRemove,
+  sortBySignal = true,
 }: {
   items: WatchlistCard[];
   selected: string;
   onSelect: (symbol: string) => void;
   onRemove?: (symbol: string) => void;
+  sortBySignal?: boolean;
 }) {
   const [parent] = useAutoAnimate();
+
+  const displayItems = sortBySignal
+    ? [...items].sort((a, b) => (a.rank ?? 999) - (b.rank ?? 999))
+    : items;
 
   return (
     <div className="relative">
@@ -35,7 +47,7 @@ export function WatchlistStrip({
         className="flex gap-2 overflow-x-auto pb-1 scrollbar-none"
         style={{ scrollbarWidth: "none" }}
       >
-        {items.map((item) => (
+        {displayItems.map((item) => (
           <div
             key={item.symbol}
             role="button"
@@ -48,7 +60,7 @@ export function WatchlistStrip({
               }
             }}
             className={cn(
-              "group relative flex min-w-[132px] shrink-0 cursor-pointer flex-col gap-1 rounded-xl border px-3 py-2.5 transition-all",
+              "group relative flex min-w-[148px] shrink-0 cursor-pointer flex-col gap-1.5 rounded-xl border px-3 py-2.5 transition-all",
               selected === item.symbol
                 ? "border-indigo-500/50 bg-indigo-500/[0.08]"
                 : "border-white/[0.08] bg-white/[0.02] hover:border-white/20 hover:bg-white/[0.04]"
@@ -79,12 +91,21 @@ export function WatchlistStrip({
               <span className="font-mono text-sm font-semibold text-white">{item.symbol}</span>
               <NumberTicker value={item.changePercent} suffix="%" />
             </div>
-            <div className="flex items-center justify-between gap-2">
-              <SentimentPill score={item.avgSentiment} />
-              {item.newsCount > 0 && (
-                <span className="text-[10px] text-white/35">{item.newsCount} news</span>
-              )}
-            </div>
+            {item.label != null && item.score != null ? (
+              <SignalBadge
+                label={item.label}
+                score={item.score}
+                rank={item.rank}
+                compact
+              />
+            ) : (
+              <div className="flex items-center justify-between gap-2">
+                <SentimentPill score={item.avgSentiment} />
+                {item.newsCount > 0 && (
+                  <span className="text-[10px] text-white/35">{item.newsCount} news</span>
+                )}
+              </div>
+            )}
           </div>
         ))}
       </div>

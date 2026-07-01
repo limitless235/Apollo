@@ -7,8 +7,9 @@ import {
   getArticlesForSymbol,
   getSentimentTimeline,
 } from "@/lib/news/rss-fetcher";
-import { fetchOhlcv, getPriceTrend } from "@/lib/prices/yfinance";
-import { addToWatchlist } from "@/lib/watchlist";
+import { fetchOhlcv, fetchQuoteChange, getPriceTrend } from "@/lib/prices/yfinance";
+import { addToWatchlist, getWatchlist } from "@/lib/watchlist";
+import { computeWatchlistSignals, extractFeatures, rankSignals } from "@/lib/scoring";
 
 export const agentTools = {
   resolveSymbol: tool({
@@ -101,6 +102,73 @@ export const agentTools = {
         changePercent: trend.changePercent,
         direction: trend.direction,
         periodDays: days,
+      };
+    },
+  }),
+
+  getWatchlistSignals: tool({
+    description:
+      "Rank watchlist symbols by composite signal score (momentum, sentiment, news activity, volume)",
+    inputSchema: z.object({
+      limit: z.number().optional().default(10),
+    }),
+    execute: async ({ limit }) => {
+      const watchlist = await getWatchlist();
+      const signals = await computeWatchlistSignals(watchlist);
+      return {
+        updatedAt: new Date().toISOString(),
+        items: signals.slice(0, limit).map((s) => ({
+          rank: s.rank,
+          symbol: s.symbol,
+          companyName: s.companyName,
+          score: s.score,
+          label: s.label,
+          flags: s.flags,
+          momentum5d: s.features.momentum5d,
+          momentum20d: s.features.momentum20d,
+          avgSentiment7d: s.features.avgSentiment7d,
+          newsCount7d: s.features.newsCount7d,
+        })),
+      };
+    },
+  }),
+
+  getSymbolSignal: tool({
+    description: "Get detailed signal breakdown for a single NSE symbol",
+    inputSchema: z.object({
+      symbol: z.string(),
+    }),
+    execute: async ({ symbol }) => {
+      const entry = getSymbolEntry(symbol);
+      if (!entry) return { error: `Unknown symbol: ${symbol}` };
+
+      const [ohlcv, timeline, changePercent] = await Promise.all([
+        fetchOhlcv(entry.yfinanceTicker, 90),
+        getSentimentTimeline(entry.symbol, 60),
+        fetchQuoteChange(entry.yfinanceTicker).catch(() => 0),
+      ]);
+
+      const features = extractFeatures(ohlcv, timeline);
+      const [signal] = rankSignals([
+        {
+          symbol: entry.symbol,
+          companyName: entry.companyName,
+          features,
+          changePercent,
+        },
+      ]);
+
+      return {
+        symbol: signal.symbol,
+        score: signal.score,
+        label: signal.label,
+        flags: signal.flags,
+        breakdown: signal.breakdown.map((b) => ({
+          factor: b.label,
+          raw: b.raw,
+          contribution: b.contribution,
+        })),
+        features: signal.features,
       };
     },
   }),
