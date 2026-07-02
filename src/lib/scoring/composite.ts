@@ -1,4 +1,6 @@
 import type { RawFeatures } from "./features";
+import type { RankerModel } from "./ranker-model";
+import { blendScores, predictRankerScore } from "./ranker-model";
 
 export interface FeatureContribution {
   key: string;
@@ -13,6 +15,9 @@ export interface SymbolSignal {
   symbol: string;
   companyName: string;
   score: number;
+  heuristicScore: number;
+  learnedScore: number | null;
+  rankerActive: boolean;
   rank: number;
   label: SignalLabel;
   flags: string[];
@@ -76,9 +81,13 @@ export function scoreFeatures(features: RawFeatures): {
 } {
   const breakdown: FeatureContribution[] = [];
   let score = 0;
+  const sentimentTrust = 0.55 + 0.45 * features.sentimentMlCoverage;
 
   for (const key of Object.keys(WEIGHTS) as (keyof typeof WEIGHTS)[]) {
-    const raw = features[key];
+    let raw = features[key];
+    if (key === "avgSentiment7d" || key === "sentimentDelta") {
+      raw *= sentimentTrust;
+    }
     const normalized = normalizeFeature(key, raw);
     const weight = WEIGHTS[key];
     const contribution = normalized * weight;
@@ -95,6 +104,10 @@ export function scoreFeatures(features: RawFeatures): {
   }
 
   const flags: string[] = [];
+
+  if (features.sentimentMlCoverage >= 0.75) {
+    flags.push("FinBERT-scored news");
+  }
 
   if (features.newsVolumeZ >= 1.5) {
     flags.push(
@@ -141,17 +154,26 @@ export function rankSignals(
     companyName: string;
     features: RawFeatures;
     changePercent?: number;
-  }>
+  }>,
+  rankerModel: RankerModel | null = null
 ): SymbolSignal[] {
   const scored = items.map((item) => {
-    const { score, breakdown, flags } = scoreFeatures(item.features);
+    const { score: heuristicScore, breakdown, flags } = scoreFeatures(item.features);
+    const learnedScore = predictRankerScore(item.features, rankerModel);
+    const blended = blendScores(heuristicScore, learnedScore);
+    const finalFlags = [...flags];
+    if (blended.rankerActive) finalFlags.push("ML ranker blended");
+
     return {
       symbol: item.symbol,
       companyName: item.companyName,
-      score,
+      score: blended.score,
+      heuristicScore,
+      learnedScore: blended.learnedScore,
+      rankerActive: blended.rankerActive,
       rank: 0,
-      label: signalLabel(score),
-      flags,
+      label: signalLabel(blended.score),
+      flags: finalFlags,
       features: item.features,
       breakdown,
       changePercent: item.changePercent ?? 0,

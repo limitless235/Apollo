@@ -1,7 +1,7 @@
 import Parser from "rss-parser";
 import PQueue from "p-queue";
 import { googleNewsFeedUrl } from "./feeds";
-import { analyzeSentiment, type SentimentSource } from "./sentiment";
+import { analyzeSentimentBatch, type SentimentSource } from "./sentiment";
 import { tagSymbolsFromText } from "./symbol-tagger";
 import { getSymbolEntry } from "@/lib/symbols/registry";
 import { initDb, getDb } from "@/lib/db";
@@ -57,22 +57,18 @@ export async function fetchFeed(url: string): Promise<NormalizedArticle[]> {
           };
         });
 
-      const scored: NormalizedArticle[] = [];
-      for (const item of rawItems) {
-        const sentiment = await analyzeSentiment(item.text);
-        scored.push({
-          url: item.url,
-          title: item.title,
-          summary: item.summary,
-          source: item.source,
-          publishedAt: item.publishedAt,
-          symbols: item.symbols,
-          sentimentScore: sentiment.score,
-          sentimentSource: sentiment.source,
-        });
-      }
+      const sentiments = await analyzeSentimentBatch(rawItems.map((item) => item.text));
 
-      return scored;
+      return rawItems.map((item, i) => ({
+        url: item.url,
+        title: item.title,
+        summary: item.summary,
+        source: item.source,
+        publishedAt: item.publishedAt,
+        symbols: item.symbols,
+        sentimentScore: sentiments[i].score,
+        sentimentSource: sentiments[i].source,
+      }));
     })) as NormalizedArticle[];
   } catch (error) {
     console.warn(`RSS fetch failed for ${url}:`, error instanceof Error ? error.message : error);
@@ -253,6 +249,13 @@ export async function getArticlesForSymbol(
       sentimentScore: row.sentimentScore,
       sentimentSource: (row.sentimentSource ?? "rules") as SentimentSource,
     }));
+}
+
+export async function getSentimentMlCoverage(symbol: string, days = 7): Promise<number> {
+  const articles = await getArticlesForSymbol(symbol, days);
+  if (articles.length === 0) return 0;
+  const ml = articles.filter((a) => a.sentimentSource !== "rules").length;
+  return ml / articles.length;
 }
 
 export async function getSentimentTimeline(symbol: string, days = 90) {

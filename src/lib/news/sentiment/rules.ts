@@ -18,6 +18,15 @@ const BULLISH = [
   "raises guidance",
   "profit jumps",
   "revenue growth",
+  "upper circuit",
+  "block deal",
+  "fii buying",
+  "order book",
+  "crore order",
+  "pat growth",
+  "ebitda margin",
+  "stock split",
+  "bonus issue",
 ];
 
 const BEARISH = [
@@ -45,6 +54,14 @@ const BEARISH = [
   "revenue decline",
   "scam",
   "penalty",
+  "lower circuit",
+  "fii selling",
+  "promoter pledge",
+  "insider selling",
+  "rating cut",
+  "profit warning",
+  "guidance cut",
+  "rbi penalty",
 ];
 
 export function scoreRules(text: string): number {

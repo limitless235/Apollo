@@ -15,6 +15,7 @@ export interface RawFeatures {
   sentimentDelta: number;
   newsCount7d: number;
   newsVolumeZ: number;
+  sentimentMlCoverage: number;
   latestClose: number | null;
 }
 
@@ -105,7 +106,8 @@ function newsVolumeZ(timeline: SentimentDay[], recentDays = 7, baselineDays = 30
 
 export function extractFeatures(
   ohlcv: OhlcvBar[],
-  sentimentTimeline: SentimentDay[] = []
+  sentimentTimeline: SentimentDay[] = [],
+  sentimentMlCoverage = 0
 ): RawFeatures {
   const recent7 = sentimentWindow(sentimentTimeline, 0, 7);
   const prior7 = sentimentWindow(sentimentTimeline, 7, 7);
@@ -119,6 +121,7 @@ export function extractFeatures(
     sentimentDelta: recent7.avg - prior7.avg,
     newsCount7d: recent7.count,
     newsVolumeZ: newsVolumeZ(sentimentTimeline),
+    sentimentMlCoverage,
     latestClose: ohlcv.length > 0 ? ohlcv[ohlcv.length - 1].close : null,
   };
 }

@@ -52,9 +52,13 @@ export function Dashboard() {
   const [chartLoading, setChartLoading] = useState(false);
   const [ingesting, setIngesting] = useState(false);
   const [sentimentModel, setSentimentModel] = useState<string | null>(null);
+  const [rankerActive, setRankerActive] = useState(false);
 
   const [signalDetail, setSignalDetail] = useState<{
     score: number;
+    heuristicScore?: number;
+    learnedScore?: number | null;
+    rankerActive?: boolean;
     rank: number;
     label: SignalLabel;
     flags: string[];
@@ -94,6 +98,7 @@ export function Dashboard() {
       )
     );
     setLoading(false);
+    if (data.ranker?.active) setRankerActive(true);
   }, []);
 
   const loadSignalDetail = useCallback(async (symbol: string) => {
@@ -105,6 +110,9 @@ export function Dashboard() {
     const data = await res.json();
     setSignalDetail({
       score: data.score,
+      heuristicScore: data.heuristicScore,
+      learnedScore: data.learnedScore,
+      rankerActive: data.rankerActive,
       rank: data.rank,
       label: data.label,
       flags: data.flags ?? [],
@@ -205,6 +213,9 @@ export function Dashboard() {
                 {sentimentModel && (
                   <span className="text-indigo-400/70"> · {sentimentModel} sentiment</span>
                 )}
+                {rankerActive && (
+                  <span className="text-emerald-400/70"> · ML ranker</span>
+                )}
               </p>
             </div>
           </div>
@@ -266,6 +277,15 @@ export function Dashboard() {
                     1y backtest: IC {signalDetail.backtest.ic.toFixed(3)} · DA{" "}
                     {(signalDetail.backtest.directionalAccuracy * 100).toFixed(1)}% ·{" "}
                     {signalDetail.backtest.days} days
+                  </p>
+                )}
+                {signalDetail.rankerActive && signalDetail.learnedScore != null && (
+                  <p className="text-[11px] text-white/35">
+                    Heuristic {signalDetail.heuristicScore?.toFixed(2)} + ML{" "}
+                    {signalDetail.learnedScore >= 0 ? "+" : ""}
+                    {signalDetail.learnedScore.toFixed(2)} → blended{" "}
+                    {signalDetail.score >= 0 ? "+" : ""}
+                    {signalDetail.score.toFixed(2)}
                   </p>
                 )}
               </CardHeader>

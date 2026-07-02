@@ -6,10 +6,13 @@ import {
   upsertArticles,
   getArticlesForSymbol,
   getSentimentTimeline,
+  recomputeDailySentiment,
+  getSentimentMlCoverage,
 } from "@/lib/news/rss-fetcher";
+import { isFinbertAvailable, getSentimentModelLabel, FINBERT_MODEL } from "@/lib/news/sentiment";
 import { fetchOhlcv, fetchQuoteChange, getPriceTrend } from "@/lib/prices/yfinance";
 import { addToWatchlist, getWatchlist } from "@/lib/watchlist";
-import { computeWatchlistSignals, extractFeatures, rankSignals } from "@/lib/scoring";
+import { computeWatchlistSignals, extractFeatures, rankSignals, loadRankerModel, getRankerStatus } from "@/lib/scoring";
 
 export const agentTools = {
   resolveSymbol: tool({
@@ -41,6 +44,7 @@ export const agentTools = {
 
       const items = await fetchCompanyNews(entry.symbol);
       await upsertArticles(items);
+      await recomputeDailySentiment([entry.symbol]);
 
       const articles = await getArticlesForSymbol(entry.symbol, days);
       return {
@@ -143,25 +147,32 @@ export const agentTools = {
       const entry = getSymbolEntry(symbol);
       if (!entry) return { error: `Unknown symbol: ${symbol}` };
 
-      const [ohlcv, timeline, changePercent] = await Promise.all([
+      const [ohlcv, timeline, changePercent, mlCoverage] = await Promise.all([
         fetchOhlcv(entry.yfinanceTicker, 90),
         getSentimentTimeline(entry.symbol, 60),
         fetchQuoteChange(entry.yfinanceTicker).catch(() => 0),
+        getSentimentMlCoverage(entry.symbol, 7),
       ]);
 
-      const features = extractFeatures(ohlcv, timeline);
-      const [signal] = rankSignals([
-        {
-          symbol: entry.symbol,
-          companyName: entry.companyName,
-          features,
-          changePercent,
-        },
-      ]);
+      const features = extractFeatures(ohlcv, timeline, mlCoverage);
+      const [signal] = rankSignals(
+        [
+          {
+            symbol: entry.symbol,
+            companyName: entry.companyName,
+            features,
+            changePercent,
+          },
+        ],
+        loadRankerModel()
+      );
 
       return {
         symbol: signal.symbol,
         score: signal.score,
+        heuristicScore: signal.heuristicScore,
+        learnedScore: signal.learnedScore,
+        rankerActive: signal.rankerActive,
         label: signal.label,
         flags: signal.flags,
         breakdown: signal.breakdown.map((b) => ({
@@ -172,6 +183,32 @@ export const agentTools = {
         features: signal.features,
       };
     },
+  }),
+
+  getSentimentStatus: tool({
+    description: "Check FinBERT/hybrid sentiment model status and article coverage",
+    inputSchema: z.object({}),
+    execute: async () => {
+      const finbertReady = await isFinbertAvailable();
+      const mode = process.env.SENTIMENT_MODEL ?? "hybrid";
+      return {
+        model: FINBERT_MODEL,
+        mode,
+        finbertReady,
+        label: getSentimentModelLabel(
+          mode === "rules" ? "rules" : mode === "finbert" ? "finbert" : "hybrid"
+        ),
+        hint: finbertReady
+          ? "Headlines are scored with FinBERT + keyword hybrid by default."
+          : "FinBERT unavailable; falling back to keyword rules only.",
+      };
+    },
+  }),
+
+  getRankerStatus: tool({
+    description: "Check ML ranker model status (walk-forward ridge regression on features)",
+    inputSchema: z.object({}),
+    execute: async () => getRankerStatus(),
   }),
 
   addToWatchlist: tool({
