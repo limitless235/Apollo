@@ -7,6 +7,7 @@ export function StatChips({
   avgSentiment,
   newsCount,
   signal,
+  rankerActive = false,
 }: {
   latestClose: number | null;
   changePercent: number;
@@ -14,9 +15,12 @@ export function StatChips({
   newsCount: number;
   signal?: {
     score: number;
+    heuristicScore?: number;
+    learnedScore?: number | null;
     rank: number;
     label: SignalLabel;
   } | null;
+  rankerActive?: boolean;
 }) {
   const chips = [
     {
@@ -55,6 +59,20 @@ export function StatChips({
             label: "Rank",
             value: `#${signal.rank}`,
           },
+          ...(rankerActive && signal.learnedScore != null
+            ? [
+                {
+                  label: "Heuristic",
+                  value: `${(signal.heuristicScore ?? 0) >= 0 ? "+" : ""}${(signal.heuristicScore ?? 0).toFixed(2)}`,
+                  color: "text-white/70",
+                },
+                {
+                  label: "ML",
+                  value: `${signal.learnedScore >= 0 ? "+" : ""}${signal.learnedScore.toFixed(2)}`,
+                  color: "text-emerald-400/80",
+                },
+              ]
+            : []),
         ]
       : []),
   ];

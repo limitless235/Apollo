@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { initDb } from "@/lib/db";
+import { getWatchlist } from "@/lib/watchlist";
 import { getSymbolEntry } from "@/lib/symbols/registry";
-import { fetchOhlcv, fetchQuoteChange } from "@/lib/prices/yfinance";
-import { getSentimentTimeline, getSentimentMlCoverage } from "@/lib/news/rss-fetcher";
-import { extractFeatures, rankSignals, backtestSymbol, loadRankerModel } from "@/lib/scoring";
+import { fetchOhlcv } from "@/lib/prices/yfinance";
+import { getSentimentTimeline } from "@/lib/news/rss-fetcher";
+import { computeWatchlistSignals, backtestSymbol } from "@/lib/scoring";
 
 export async function GET(
   _req: Request,
@@ -18,19 +19,21 @@ export async function GET(
     return NextResponse.json({ error: `Unknown symbol: ${symbol}` }, { status: 404 });
   }
 
-  const [ohlcv, timeline, changePercent, backtestOhlcv, mlCoverage] = await Promise.all([
-    fetchOhlcv(entry.yfinanceTicker, 90),
-    getSentimentTimeline(symbol, 60),
-    fetchQuoteChange(entry.yfinanceTicker).catch(() => 0),
+  const watchlist = await getWatchlist();
+  const batchItems = watchlist.some((w) => w.symbol === symbol)
+    ? watchlist
+    : [...watchlist, { symbol, companyName: entry.companyName }];
+
+  const [signals, backtestOhlcv, timeline] = await Promise.all([
+    computeWatchlistSignals(batchItems),
     fetchOhlcv(entry.yfinanceTicker, 365),
-    getSentimentMlCoverage(symbol, 7),
+    getSentimentTimeline(symbol, 60),
   ]);
 
-  const features = extractFeatures(ohlcv, timeline, mlCoverage);
-  const [signal] = rankSignals(
-    [{ symbol, companyName: entry.companyName, features, changePercent }],
-    loadRankerModel()
-  );
+  const signal = signals.find((s) => s.symbol === symbol);
+  if (!signal) {
+    return NextResponse.json({ error: `Could not score: ${symbol}` }, { status: 500 });
+  }
 
   const backtest = backtestSymbol(symbol, backtestOhlcv, timeline);
 

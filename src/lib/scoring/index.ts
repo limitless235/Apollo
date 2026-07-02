@@ -17,6 +17,8 @@ export {
   loadRankerModel,
   saveRankerModel,
   predictRankerScore,
+  predictRankerScoresBatch,
+  predictReturnsBatch,
   predictReturn,
   getRankerBlend,
   getEffectiveRankerBlend,
@@ -73,13 +75,21 @@ export async function computeWatchlistSignals(
 
 export function getRankerStatus() {
   const model = loadRankerModel();
+  const active = model != null;
   return {
-    active: model != null,
+    active,
+    crossSectional: model?.crossSectional ?? false,
+    version: model?.version ?? null,
     trainedAt: model?.trainedAt ?? null,
     sampleCount: model?.sampleCount ?? 0,
     holdoutIc: model?.holdoutMetrics.ic ?? null,
+    holdoutPooledIc: model?.holdoutMetrics.pooledIc ?? null,
     holdoutDa: model?.holdoutMetrics.directionalAccuracy ?? null,
+    ridgeLambda: model?.ridgeLambda ?? null,
     blend: getRankerBlend(),
     effectiveBlend: getEffectiveRankerBlend(model),
+    trainHint: active
+      ? null
+      : "Run npm run train:ranker locally to enable ML-ranked watchlist",
   };
 }

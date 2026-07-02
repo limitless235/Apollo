@@ -24,7 +24,7 @@ async function main() {
   );
   if (model) {
     console.log(
-      `Holdout IC ${model.holdoutMetrics.ic.toFixed(3)} · trained ${model.trainedAt.slice(0, 10)}\n`
+      `Holdout daily IC ${model.holdoutMetrics.ic.toFixed(3)} · v${model.version}${model.crossSectional ? " CS" : ""} · trained ${model.trainedAt.slice(0, 10)}\n`
     );
   } else {
     console.log("Run: npm run train:ranker\n");

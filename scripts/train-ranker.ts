@@ -21,9 +21,9 @@ async function main() {
   }
 
   console.log(`\nApollo Ranker Training — ${symbols.length} symbols\n`);
-  console.log("Collecting walk-forward samples (1y OHLCV + sentiment)...");
+  console.log("Collecting walk-forward samples (~2y OHLCV + sentiment)...");
 
-  const samples = await collectWatchlistTrainingData(symbols, 365);
+  const samples = await collectWatchlistTrainingData(symbols, 500);
   console.log(`  Samples: ${samples.length}`);
 
   if (samples.length < 80) {
@@ -31,7 +31,11 @@ async function main() {
     process.exit(1);
   }
 
-  const model = trainRidgeRanker(samples, { holdoutRatio: 0.25, ridgeLambda: 1.5 });
+  const model = trainRidgeRanker(samples, {
+    holdoutRatio: 0.25,
+    tuneLambda: true,
+    useRecencyWeights: true,
+  });
   if (!model) {
     console.log("\nTraining failed — insufficient data after holdout split.");
     process.exit(1);
@@ -41,12 +45,19 @@ async function main() {
   saveRankerModel(model, outPath);
 
   console.log(`\n── Model saved → ${outPath} ──\n`);
-  console.log("Train set:");
-  console.log(`  IC:  ${model.trainMetrics.ic.toFixed(3)}`);
+  console.log(`Type: v${model.version} cross-sectional ridge (λ=${model.ridgeLambda})`);
+  console.log("\nTrain set:");
+  console.log(`  Daily IC:  ${model.trainMetrics.ic.toFixed(3)}  (ranking metric)`);
+  if (model.trainMetrics.pooledIc != null) {
+    console.log(`  Pooled IC: ${model.trainMetrics.pooledIc.toFixed(3)}`);
+  }
   console.log(`  DA:  ${(model.trainMetrics.directionalAccuracy * 100).toFixed(1)}%`);
   console.log(`  MAE: ${model.trainMetrics.mae.toFixed(3)}%`);
   console.log("\nHoldout set (honest estimate):");
-  console.log(`  IC:  ${model.holdoutMetrics.ic.toFixed(3)}  (research: 0.03–0.08 meaningful)`);
+  console.log(`  Daily IC:  ${model.holdoutMetrics.ic.toFixed(3)}  (research: 0.03–0.08 meaningful)`);
+  if (model.holdoutMetrics.pooledIc != null) {
+    console.log(`  Pooled IC: ${model.holdoutMetrics.pooledIc.toFixed(3)}`);
+  }
   console.log(`  DA:  ${(model.holdoutMetrics.directionalAccuracy * 100).toFixed(1)}%`);
   console.log(`  MAE: ${model.holdoutMetrics.mae.toFixed(3)}%`);
   console.log("\nTop feature weights (standardized):");

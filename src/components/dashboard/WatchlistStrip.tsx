@@ -14,6 +14,9 @@ export interface WatchlistCard {
   avgSentiment: number;
   newsCount: number;
   score?: number;
+  heuristicScore?: number;
+  learnedScore?: number | null;
+  rankerActive?: boolean;
   rank?: number;
   label?: SignalLabel;
   flags?: string[];
@@ -92,12 +95,22 @@ export function WatchlistStrip({
               <NumberTicker value={item.changePercent} suffix="%" />
             </div>
             {item.label != null && item.score != null ? (
-              <SignalBadge
-                label={item.label}
-                score={item.score}
-                rank={item.rank}
-                compact
-              />
+              <div className="space-y-1">
+                <SignalBadge
+                  label={item.label}
+                  score={item.score}
+                  rank={item.rank}
+                  compact
+                />
+                {item.rankerActive && item.learnedScore != null && (
+                  <p className="font-mono text-[9px] leading-tight text-white/30">
+                    H {(item.heuristicScore ?? 0) >= 0 ? "+" : ""}
+                    {(item.heuristicScore ?? 0).toFixed(2)}
+                    {" · "}ML {item.learnedScore >= 0 ? "+" : ""}
+                    {item.learnedScore.toFixed(2)}
+                  </p>
+                )}
+              </div>
             ) : (
               <div className="flex items-center justify-between gap-2">
                 <SentimentPill score={item.avgSentiment} />

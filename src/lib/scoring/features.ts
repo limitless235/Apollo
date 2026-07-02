@@ -9,6 +9,7 @@ export interface SentimentDay {
 export interface RawFeatures {
   momentum5d: number;
   momentum20d: number;
+  return1d: number;
   volatility20d: number;
   volumeZScore: number;
   avgSentiment7d: number;
@@ -104,6 +105,14 @@ function newsVolumeZ(timeline: SentimentDay[], recentDays = 7, baselineDays = 30
   return (recentDaily - mean) / sd;
 }
 
+function return1d(bars: OhlcvBar[]): number {
+  if (bars.length < 2) return 0;
+  const prev = bars[bars.length - 2].close;
+  const curr = bars[bars.length - 1].close;
+  if (prev <= 0) return 0;
+  return ((curr - prev) / prev) * 100;
+}
+
 export function extractFeatures(
   ohlcv: OhlcvBar[],
   sentimentTimeline: SentimentDay[] = [],
@@ -115,6 +124,7 @@ export function extractFeatures(
   return {
     momentum5d: momentum(ohlcv, 5),
     momentum20d: momentum(ohlcv, 20),
+    return1d: return1d(ohlcv),
     volatility20d: volatility(ohlcv, 20),
     volumeZScore: volumeZScore(ohlcv, 20),
     avgSentiment7d: recent7.avg,

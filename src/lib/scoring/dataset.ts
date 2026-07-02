@@ -43,7 +43,7 @@ export function buildSamplesFromSeries(
 
 export async function collectWatchlistTrainingData(
   symbols: string[],
-  historyDays = 365
+  historyDays = 500
 ): Promise<TrainingSample[]> {
   await initArticleCoverageCache();
   const all: TrainingSample[] = [];

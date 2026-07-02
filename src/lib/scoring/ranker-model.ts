@@ -7,17 +7,20 @@ import {
   standardizeVector,
   returnToScore,
 } from "./feature-vector";
+import { crossSectionalZScoreRows } from "./cross-sectional";
 
 export interface RankerMetrics {
   ic: number;
+  pooledIc?: number;
   directionalAccuracy: number;
   mae: number;
   samples: number;
 }
 
 export interface RankerModel {
-  version: 1;
+  version: 1 | 2;
   type: "ridge-linear";
+  crossSectional?: boolean;
   featureNames: readonly string[];
   means: number[];
   stds: number[];
@@ -49,7 +52,7 @@ export function loadRankerModel(force = false): RankerModel | null {
 
   try {
     const raw = JSON.parse(fs.readFileSync(modelPath, "utf-8")) as RankerModel;
-    if (raw.version !== 1 || raw.type !== "ridge-linear") {
+    if (raw.type !== "ridge-linear") {
       cachedModel = null;
       return null;
     }
@@ -69,16 +72,43 @@ export function saveRankerModel(model: RankerModel, filePath?: string): void {
 }
 
 export function predictReturn(features: RawFeatures, model: RankerModel): number {
-  const vector = standardizeVector(
-    featuresToVector(features),
-    model.means,
-    model.stds
-  );
-  let sum = model.bias;
-  for (let i = 0; i < vector.length; i++) {
-    sum += vector[i] * model.weights[i];
+  return predictReturnsBatch([features], model)[0];
+}
+
+function toModelVectors(
+  featuresList: RawFeatures[],
+  model: RankerModel
+): number[][] {
+  const raw = featuresList.map((f) => featuresToVector(f));
+  const cs =
+    model.crossSectional && featuresList.length >= 5
+      ? crossSectionalZScoreRows(raw)
+      : raw;
+  return cs.map((v) => standardizeVector(v, model.means, model.stds));
+}
+
+export function predictReturnsBatch(
+  featuresList: RawFeatures[],
+  model: RankerModel
+): number[] {
+  const vectors = toModelVectors(featuresList, model);
+  return vectors.map((vector) => {
+    let sum = model.bias;
+    for (let i = 0; i < vector.length; i++) {
+      sum += vector[i] * model.weights[i];
+    }
+    return sum;
+  });
+}
+
+export function predictRankerScoresBatch(
+  featuresList: RawFeatures[],
+  model: RankerModel | null
+): (number | null)[] {
+  if (!model || featuresList.length === 0) {
+    return featuresList.map(() => null);
   }
-  return sum;
+  return predictReturnsBatch(featuresList, model).map((r) => returnToScore(r));
 }
 
 export function predictRankerScore(

@@ -11,14 +11,14 @@ import {
   extractFeaturesAt,
   scoreFeatures,
   loadRankerModel,
-  predictReturn,
-  returnToScore,
+  predictRankerScoresBatch,
   blendScores,
   getEffectiveRankerBlend,
   getTxCostPct,
   type SentimentDay,
   type RawFeatures,
 } from "../src/lib/scoring";
+import type { RankerModel } from "../src/lib/scoring/ranker-model";
 import {
   applyTransactionCost,
   estimateDailyTurnover,
@@ -60,7 +60,9 @@ function spearman(x: number[], y: number[]): number {
 function portfolioSim(
   seriesBySymbol: Map<string, OhlcvBar[]>,
   sentimentBySymbol: Map<string, SentimentDay[]>,
-  scoreFn: (features: RawFeatures) => number,
+  mode: "heuristic" | "learned" | "blended",
+  model: RankerModel | null,
+  effectiveBlend: number,
   topK = 5,
   minHistory = 30
 ) {
@@ -77,7 +79,7 @@ function portfolioSim(
   const txCost = getTxCostPct();
 
   for (const date of dates) {
-    const day: Array<{ score: number; nextRet: number }> = [];
+    const day: Array<{ features: RawFeatures; nextRet: number }> = [];
     for (const symbol of symbols) {
       const bars = seriesBySymbol.get(symbol)!;
       const sentiment = sentimentBySymbol.get(symbol) ?? [];
@@ -85,16 +87,28 @@ function portfolioSim(
       if (!features) continue;
       const nextRet = nextDayReturn(bars, date);
       if (nextRet == null) continue;
-      day.push({ score: scoreFn(features), nextRet });
+      day.push({ features, nextRet });
     }
     if (day.length < topK) continue;
-    day.sort((a, b) => b.score - a.score);
-    const top = day.slice(0, topK);
+
+    const features = day.map((d) => d.features);
+    const heuristicScores = features.map((f) => scoreFeatures(f).score);
+    const learnedScores = predictRankerScoresBatch(features, model);
+
+    const scores = day.map((_, i) => {
+      if (mode === "heuristic") return heuristicScores[i];
+      if (mode === "learned") return learnedScores[i] ?? heuristicScores[i];
+      return blendScores(heuristicScores[i], learnedScores[i], effectiveBlend).score;
+    });
+
+    const ranked = scores.map((score, i) => ({ score, nextRet: day[i].nextRet }));
+    ranked.sort((a, b) => b.score - a.score);
+    const top = ranked.slice(0, topK);
     const gross = top.reduce((s, d) => s + d.nextRet, 0) / top.length;
     grossReturns.push(gross);
-    const turnover = estimateDailyTurnover(topK, day.length);
+    const turnover = estimateDailyTurnover(topK, ranked.length);
     netReturns.push(applyTransactionCost(gross, turnover, txCost));
-    for (const d of day) {
+    for (const d of ranked) {
       allScores.push(d.score);
       allReturns.push(d.nextRet);
     }
@@ -127,8 +141,11 @@ async function main() {
 
   console.log(`Model trained: ${model.trainedAt.slice(0, 10)} (${model.sampleCount} samples)`);
   console.log(
-    `Holdout IC: ${model.holdoutMetrics.ic.toFixed(3)} · DA: ${(model.holdoutMetrics.directionalAccuracy * 100).toFixed(1)}%`
+    `Holdout daily IC: ${model.holdoutMetrics.ic.toFixed(3)} · DA: ${(model.holdoutMetrics.directionalAccuracy * 100).toFixed(1)}%`
   );
+  if (model.crossSectional) {
+    console.log(`Mode: v${model.version} cross-sectional · λ=${model.ridgeLambda}`);
+  }
   console.log(`Effective ML blend: ${(effectiveBlend * 100).toFixed(0)}% · Tx cost: ${getTxCostPct()}%/turnover\n`);
   console.log("Fetching 1y data...\n");
 
@@ -148,17 +165,27 @@ async function main() {
     console.log(` ${ohlcv.length} bars`);
   }
 
-  const heuristic = portfolioSim(seriesBySymbol, sentimentBySymbol, (f) =>
-    scoreFeatures(f).score
+  const heuristic = portfolioSim(
+    seriesBySymbol,
+    sentimentBySymbol,
+    "heuristic",
+    model,
+    effectiveBlend
   );
-  const learned = portfolioSim(seriesBySymbol, sentimentBySymbol, (f) =>
-    returnToScore(predictReturn(f, model))
+  const learned = portfolioSim(
+    seriesBySymbol,
+    sentimentBySymbol,
+    "learned",
+    model,
+    effectiveBlend
   );
-  const blended = portfolioSim(seriesBySymbol, sentimentBySymbol, (f) => {
-    const h = scoreFeatures(f).score;
-    const l = returnToScore(predictReturn(f, model));
-    return blendScores(h, l, effectiveBlend).score;
-  });
+  const blended = portfolioSim(
+    seriesBySymbol,
+    sentimentBySymbol,
+    "blended",
+    model,
+    effectiveBlend
+  );
 
   console.log("\n── Top-5 portfolio (net of tx costs) ──\n");
   console.log(

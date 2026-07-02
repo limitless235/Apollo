@@ -8,7 +8,7 @@ Personal NSE/BSE news dashboard with price charts, sentiment overlays, and an AI
 - **News ingestion** — Google News RSS per company + Moneycontrol/ET/Business Standard feeds
 - **FinBERT sentiment** — Hybrid ML + keyword scoring on headlines (Stage 2)
 - **Signal ranking** — Composite score from momentum, sentiment, news activity, volume (Stage 1)
-- **ML ranker** — Walk-forward ridge model blends with heuristics (Stage 3)
+- **ML ranker** — Cross-sectional v2 ridge model blends with heuristics on the ranked watchlist (Stage 3)
 - **Charts** — Candlestick price chart with sentiment-colored news markers
 - **Sentiment timeline** — Rolling daily sentiment and article volume
 - **Manager's Desk chat** — Claude agent with tools to pull news, analyze sentiment, and explain context
@@ -23,9 +23,11 @@ cp .env.example .env.local
 npm install
 npm run db:seed      # Seed NIFTY 50 watchlist
 npm run ingest       # Pull news
-npm run train:ranker # Train ML ranker on 1y walk-forward data
+npm run train:ranker # Train v2 cross-sectional ranker → data/ranker-model.json (required for ML on site)
 npm run dev
 ```
+
+The dashboard reads `data/ranker-model.json` at runtime. That file is gitignored — run `train:ranker` on each machine (or after deploy) so the watchlist shows ML ranks and the header displays ranker status.
 
 ## Scripts
 
@@ -37,8 +39,9 @@ npm run dev
 | `npm run rescore-sentiment` | Rescore all articles with FinBERT/hybrid |
 | `npm run eval:sentiment` | Compare rules vs FinBERT on stored headlines |
 | `npm run eval:signals` | Walk-forward backtest of signal scores |
-| `npm run train:ranker` | Train ridge-linear ranker → `data/ranker-model.json` |
+| `npm run train:ranker` | Train v2 cross-sectional ranker → `data/ranker-model.json` |
 | `npm run eval:ranker` | Compare heuristic vs learned vs blended ranking |
+| `npm run show:ranks` | Print live ranked watchlist (CLI) |
 | `npm run build` | Production build |
 
 ## API routes

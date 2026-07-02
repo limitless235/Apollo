@@ -17,6 +17,11 @@ import {
   EmptyNews,
   ChartLoading,
 } from "@/components/dashboard/empty-states";
+import {
+  RankerHeaderHint,
+  RankerInactiveBanner,
+  type RankerStatusInfo,
+} from "@/components/dashboard/RankerStatus";
 
 interface ChartData {
   symbol: string;
@@ -52,7 +57,7 @@ export function Dashboard() {
   const [chartLoading, setChartLoading] = useState(false);
   const [ingesting, setIngesting] = useState(false);
   const [sentimentModel, setSentimentModel] = useState<string | null>(null);
-  const [rankerActive, setRankerActive] = useState(false);
+  const [rankerStatus, setRankerStatus] = useState<RankerStatusInfo | null>(null);
 
   const [signalDetail, setSignalDetail] = useState<{
     score: number;
@@ -80,6 +85,9 @@ export function Dashboard() {
           companyName: string;
           changePercent: number;
           score: number;
+          heuristicScore: number;
+          learnedScore: number | null;
+          rankerActive: boolean;
           rank: number;
           label: SignalLabel;
           flags: string[];
@@ -91,14 +99,17 @@ export function Dashboard() {
           avgSentiment: item.features.avgSentiment7d,
           newsCount: item.features.newsCount7d,
           score: item.score,
+          heuristicScore: item.heuristicScore,
+          learnedScore: item.learnedScore,
+          rankerActive: item.rankerActive,
           rank: item.rank,
           label: item.label,
           flags: item.flags,
         })
       )
     );
+    setRankerStatus(data.ranker ?? null);
     setLoading(false);
-    if (data.ranker?.active) setRankerActive(true);
   }, []);
 
   const loadSignalDetail = useCallback(async (symbol: string) => {
@@ -213,9 +224,7 @@ export function Dashboard() {
                 {sentimentModel && (
                   <span className="text-indigo-400/70"> · {sentimentModel} sentiment</span>
                 )}
-                {rankerActive && (
-                  <span className="text-emerald-400/70"> · ML ranker</span>
-                )}
+                <RankerHeaderHint ranker={rankerStatus} />
               </p>
             </div>
           </div>
@@ -233,6 +242,8 @@ export function Dashboard() {
             {ingesting && <span className="live-pulse" title="Ingesting" />}
           </div>
         </header>
+
+        <RankerInactiveBanner ranker={rankerStatus} />
 
         {/* Watchlist strip */}
         <section className="border-b border-white/[0.06] px-4 py-3 lg:px-6">
@@ -258,6 +269,7 @@ export function Dashboard() {
             avgSentiment={avgSentiment}
             newsCount={articles.length}
             signal={signalDetail}
+            rankerActive={rankerStatus?.active ?? false}
           />
           {signalDetail && (
             <Card className="border-white/[0.08] bg-white/[0.02]">

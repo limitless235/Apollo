@@ -4,6 +4,7 @@ import type { RawFeatures } from "./features";
 export const RANKER_FEATURE_KEYS = [
   "momentum5d",
   "momentum20d",
+  "return1d",
   "volatility20d",
   "volumeZScore",
   "avgSentiment7d",
@@ -19,6 +20,7 @@ export function featuresToVector(features: RawFeatures): number[] {
   return [
     features.momentum5d,
     features.momentum20d,
+    features.return1d,
     features.volatility20d,
     features.volumeZScore,
     features.avgSentiment7d,
