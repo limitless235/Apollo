@@ -35,6 +35,7 @@ export function initDb() {
       published_at INTEGER NOT NULL,
       symbols TEXT NOT NULL DEFAULT '[]',
       sentiment_score REAL NOT NULL DEFAULT 0,
+      sentiment_source TEXT NOT NULL DEFAULT 'rules',
       fetched_at INTEGER NOT NULL
     );
     CREATE TABLE IF NOT EXISTS daily_sentiment (
@@ -56,5 +57,10 @@ export function initDb() {
     CREATE INDEX IF NOT EXISTS idx_articles_published ON articles(published_at);
     CREATE INDEX IF NOT EXISTS idx_daily_sentiment_symbol ON daily_sentiment(symbol, date);
   `);
+  try {
+    sqlite.exec(`ALTER TABLE articles ADD COLUMN sentiment_source TEXT NOT NULL DEFAULT 'rules'`);
+  } catch {
+    // column already exists
+  }
   return getDb();
 }

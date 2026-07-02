@@ -52,6 +52,7 @@ export const agentTools = {
           source: a.source,
           publishedAt: a.publishedAt.toISOString(),
           sentiment: a.sentimentScore,
+          sentimentSource: a.sentimentSource,
           url: a.url,
         })),
       };

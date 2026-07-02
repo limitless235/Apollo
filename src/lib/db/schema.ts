@@ -9,6 +9,7 @@ export const articles = sqliteTable("articles", {
   publishedAt: integer("published_at", { mode: "timestamp" }).notNull(),
   symbols: text("symbols").notNull().default("[]"),
   sentimentScore: real("sentiment_score").notNull().default(0),
+  sentimentSource: text("sentiment_source").notNull().default("rules"),
   fetchedAt: integer("fetched_at", { mode: "timestamp" }).notNull(),
 });
 

@@ -51,6 +51,7 @@ export function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [chartLoading, setChartLoading] = useState(false);
   const [ingesting, setIngesting] = useState(false);
+  const [sentimentModel, setSentimentModel] = useState<string | null>(null);
 
   const [signalDetail, setSignalDetail] = useState<{
     score: number;
@@ -130,6 +131,10 @@ export function Dashboard() {
 
   useEffect(() => {
     loadWatchlist();
+    fetch("/api/sentiment/status")
+      .then((r) => r.json())
+      .then((d) => setSentimentModel(d.finbertReady ? d.label : "Rules"))
+      .catch(() => setSentimentModel(null));
   }, [loadWatchlist]);
 
   useEffect(() => {
@@ -195,7 +200,12 @@ export function Dashboard() {
             </div>
             <div>
               <h1 className="text-base font-semibold tracking-tight text-white">Apollo</h1>
-              <p className="text-[11px] text-white/40">NSE news & charts</p>
+              <p className="text-[11px] text-white/40">
+                NSE news & charts
+                {sentimentModel && (
+                  <span className="text-indigo-400/70"> · {sentimentModel} sentiment</span>
+                )}
+              </p>
             </div>
           </div>
 

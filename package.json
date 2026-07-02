@@ -11,12 +11,15 @@
     "db:push": "drizzle-kit push",
     "db:seed": "tsx scripts/seed.ts",
     "ingest": "tsx scripts/ingest.ts",
-    "eval:signals": "tsx scripts/eval-signals.ts"
+    "eval:signals": "tsx scripts/eval-signals.ts",
+    "eval:sentiment": "tsx scripts/eval-sentiment.ts",
+    "rescore-sentiment": "tsx scripts/rescore-sentiment.ts"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^2.0.0",
     "@ai-sdk/react": "^2.0.0",
     "@formkit/auto-animate": "^0.8.2",
+    "@huggingface/transformers": "^4.2.0",
     "@iconify/react": "^6.0.0",
     "@phosphor-icons/react": "^2.1.7",
     "@radix-ui/react-dialog": "^1.1.6",

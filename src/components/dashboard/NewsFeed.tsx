@@ -13,6 +13,7 @@ export interface NewsArticle {
   source: string | null;
   publishedAt: string;
   sentimentScore: number;
+  sentimentSource?: "rules" | "finbert" | "hybrid";
   url: string;
 }
 
@@ -74,6 +75,11 @@ export function NewsFeed({
                     >
                       {article.sentimentScore.toFixed(2)}
                     </Badge>
+                    {article.sentimentSource && article.sentimentSource !== "rules" && (
+                      <span className="shrink-0 rounded bg-indigo-500/10 px-1 py-0.5 text-[9px] uppercase tracking-wide text-indigo-300/70">
+                        {article.sentimentSource === "finbert" ? "ML" : "hyb"}
+                      </span>
+                    )}
                     <ArrowSquareOut
                       size={12}
                       className="shrink-0 text-white/20 group-hover:text-indigo-400"

@@ -1,7 +1,7 @@
 import Parser from "rss-parser";
 import PQueue from "p-queue";
 import { googleNewsFeedUrl } from "./feeds";
-import { scoreSentiment } from "./sentiment";
+import { analyzeSentiment, type SentimentSource } from "./sentiment";
 import { tagSymbolsFromText } from "./symbol-tagger";
 import { getSymbolEntry } from "@/lib/symbols/registry";
 import { initDb, getDb } from "@/lib/db";
@@ -28,6 +28,7 @@ export interface NormalizedArticle {
   publishedAt: Date;
   symbols: string[];
   sentimentScore: number;
+  sentimentSource: SentimentSource;
 }
 
 export async function fetchFeed(url: string): Promise<NormalizedArticle[]> {
@@ -36,7 +37,7 @@ export async function fetchFeed(url: string): Promise<NormalizedArticle[]> {
       const feed = await parser.parseURL(url);
       const source = feed.title ?? new URL(url).hostname;
 
-      return (feed.items ?? [])
+      const rawItems = (feed.items ?? [])
         .filter((item) => item.title && item.link)
         .map((item) => {
           const title = item.title!.trim();
@@ -52,9 +53,26 @@ export async function fetchFeed(url: string): Promise<NormalizedArticle[]> {
             source,
             publishedAt,
             symbols: explicitSymbols,
-            sentimentScore: scoreSentiment(text),
+            text,
           };
         });
+
+      const scored: NormalizedArticle[] = [];
+      for (const item of rawItems) {
+        const sentiment = await analyzeSentiment(item.text);
+        scored.push({
+          url: item.url,
+          title: item.title,
+          summary: item.summary,
+          source: item.source,
+          publishedAt: item.publishedAt,
+          symbols: item.symbols,
+          sentimentScore: sentiment.score,
+          sentimentSource: sentiment.source,
+        });
+      }
+
+      return scored;
     })) as NormalizedArticle[];
   } catch (error) {
     console.warn(`RSS fetch failed for ${url}:`, error instanceof Error ? error.message : error);
@@ -92,6 +110,7 @@ export async function upsertArticles(items: NormalizedArticle[]): Promise<number
           publishedAt: item.publishedAt,
           symbols: JSON.stringify(item.symbols),
           sentimentScore: item.sentimentScore,
+          sentimentSource: item.sentimentSource,
           fetchedAt: now,
         })
         .onConflictDoUpdate({
@@ -101,6 +120,7 @@ export async function upsertArticles(items: NormalizedArticle[]): Promise<number
             summary: item.summary,
             symbols: JSON.stringify(item.symbols),
             sentimentScore: item.sentimentScore,
+            sentimentSource: item.sentimentSource,
             fetchedAt: now,
           },
         });
@@ -204,6 +224,7 @@ export async function getArticlesForSymbol(
     source: string | null;
     publishedAt: Date;
     sentimentScore: number;
+    sentimentSource: SentimentSource;
   }>
 > {
   initDb();
@@ -230,6 +251,7 @@ export async function getArticlesForSymbol(
       source: row.source,
       publishedAt: row.publishedAt,
       sentimentScore: row.sentimentScore,
+      sentimentSource: (row.sentimentSource ?? "rules") as SentimentSource,
     }));
 }
 

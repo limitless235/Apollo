@@ -47,7 +47,7 @@ const BEARISH = [
   "penalty",
 ];
 
-export function scoreSentiment(text: string): number {
+export function scoreRules(text: string): number {
   const lower = text.toLowerCase();
   let bullish = 0;
   let bearish = 0;
@@ -63,12 +63,4 @@ export function scoreSentiment(text: string): number {
   if (total === 0) return 0;
   const score = (bullish - bearish) / total;
   return Math.max(-1, Math.min(1, score));
-}
-
-export function isBullish(score: number): boolean {
-  return score >= 0.2;
-}
-
-export function isBearish(score: number): boolean {
-  return score <= -0.2;
 }
