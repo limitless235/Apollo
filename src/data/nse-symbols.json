@@ -22,7 +22,7 @@
   { "symbol": "NESTLEIND", "companyName": "Nestle India Ltd", "yfinanceTicker": "NESTLEIND.NS", "aliases": ["Nestle India"] },
   { "symbol": "POWERGRID", "companyName": "Power Grid Corporation of India Ltd", "yfinanceTicker": "POWERGRID.NS", "aliases": ["Power Grid"] },
   { "symbol": "NTPC", "companyName": "NTPC Ltd", "yfinanceTicker": "NTPC.NS", "aliases": [] },
-  { "symbol": "TATAMOTORS", "companyName": "Tata Motors Ltd", "yfinanceTicker": "TATAMOTORS.NS", "aliases": ["Tata Motors"] },
+  { "symbol": "TATAMOTORS", "companyName": "Tata Motors Passenger Vehicles Ltd", "yfinanceTicker": "TMPV.NS", "aliases": ["Tata Motors", "TMPV"] },
   { "symbol": "M&M", "companyName": "Mahindra & Mahindra Ltd", "yfinanceTicker": "M&M.NS", "aliases": ["Mahindra", "M and M"] },
   { "symbol": "ADANIENT", "companyName": "Adani Enterprises Ltd", "yfinanceTicker": "ADANIENT.NS", "aliases": ["Adani Enterprises"] },
   { "symbol": "JSWSTEEL", "companyName": "JSW Steel Ltd", "yfinanceTicker": "JSWSTEEL.NS", "aliases": ["JSW Steel"] },

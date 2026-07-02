@@ -85,16 +85,17 @@ async function main() {
 
   console.log("\n── Portfolio simulation (top-" + topK + " by score, equal weight) ──\n");
   console.log(`  Days evaluated:     ${portfolio.days}`);
-  console.log(`  Cumulative return:  ${portfolio.cumulativeReturn.toFixed(2)}%`);
+  console.log(`  Net cumulative:     ${portfolio.cumulativeReturn.toFixed(2)}% (after ${portfolio.txCostPct}%/turnover)`);
+  console.log(`  Gross cumulative:   ${portfolio.grossCumulativeReturn.toFixed(2)}%`);
   console.log(`  Benchmark (all):    ${portfolio.benchmarkReturn.toFixed(2)}%`);
-  console.log(`  Sharpe (approx):    ${portfolio.sharpe.toFixed(2)}`);
+  console.log(`  Sharpe (net approx): ${portfolio.sharpe.toFixed(2)}`);
   console.log(`  Max drawdown:       ${portfolio.maxDrawdown.toFixed(2)}%`);
   console.log(`  Avg daily return:   ${portfolio.avgDailyReturn.toFixed(3)}%`);
 
   console.log("\n── Summary ──\n");
   console.log(`  Mean IC:  ${avgIc.toFixed(3)}  (research: 0.03–0.08 is meaningful)`);
   console.log(`  Mean DA:  ${(avgDa * 100).toFixed(1)}%  (research: 52–58% is realistic)`);
-  console.log("\nNote: No transaction costs applied. IC/DA vary by regime.\n");
+  console.log("\nNote: Portfolio uses 0.1%/turnover cost. IC/DA vary by regime.\n");
 }
 
 main().catch((err) => {

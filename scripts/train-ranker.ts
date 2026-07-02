@@ -53,7 +53,7 @@ async function main() {
   model.featureNames.forEach((name, i) => {
     console.log(`  ${name.padEnd(22)} ${model.weights[i] >= 0 ? "+" : ""}${model.weights[i].toFixed(4)}`);
   });
-  console.log("\nSet RANKER_BLEND=0.55 in .env.local (default). Restart dev server.\n");
+  console.log("\nSet RANKER_BLEND=0.25 in .env.local (default). Restart dev server.\n");
 }
 
 main().catch((err) => {

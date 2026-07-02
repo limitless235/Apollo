@@ -3,6 +3,7 @@ import { getSymbolEntry } from "@/lib/symbols/registry";
 import { fetchOhlcv } from "@/lib/prices/yfinance";
 import { getSentimentTimeline } from "@/lib/news/rss-fetcher";
 import { extractFeaturesAt, type SentimentDay } from "./features";
+import { mlCoverageForSymbolWindow, initArticleCoverageCache } from "./article-coverage";
 import type { TrainingSample } from "./train-ridge";
 
 function nextDayReturn(bars: OhlcvBar[], date: string): number | null {
@@ -18,14 +19,18 @@ export function buildSamplesFromSeries(
   symbol: string,
   ohlcv: OhlcvBar[],
   sentimentTimeline: SentimentDay[] = [],
-  minHistory = 30
+  minHistory = 30,
+  useArticleMlCoverage = true
 ): TrainingSample[] {
   const sorted = [...ohlcv].sort((a, b) => a.date.localeCompare(b.date));
   const samples: TrainingSample[] = [];
 
   for (let i = minHistory; i < sorted.length - 1; i++) {
     const date = sorted[i].date;
-    const features = extractFeaturesAt(sorted, sentimentTimeline, date);
+    const mlCoverage = useArticleMlCoverage
+      ? mlCoverageForSymbolWindow(symbol, date, 7)
+      : 0;
+    const features = extractFeaturesAt(sorted, sentimentTimeline, date, mlCoverage);
     if (!features) continue;
     const nextReturn = nextDayReturn(sorted, date);
     if (nextReturn == null) continue;
@@ -40,6 +45,7 @@ export async function collectWatchlistTrainingData(
   symbols: string[],
   historyDays = 365
 ): Promise<TrainingSample[]> {
+  await initArticleCoverageCache();
   const all: TrainingSample[] = [];
 
   for (const symbol of symbols) {

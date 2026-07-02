@@ -1,5 +1,5 @@
 /**
- * Compare heuristic vs learned ranker vs blend on walk-forward portfolio metrics.
+ * Compare heuristic vs learned ranker vs blend (with transaction costs).
  * Usage: npm run eval:ranker
  */
 import { initDb } from "../src/lib/db";
@@ -14,9 +14,16 @@ import {
   predictReturn,
   returnToScore,
   blendScores,
+  getEffectiveRankerBlend,
+  getTxCostPct,
   type SentimentDay,
   type RawFeatures,
 } from "../src/lib/scoring";
+import {
+  applyTransactionCost,
+  estimateDailyTurnover,
+  portfolioStats,
+} from "../src/lib/scoring/portfolio-costs";
 import type { OhlcvBar } from "../src/lib/prices/yfinance";
 
 function nextDayReturn(bars: OhlcvBar[], date: string): number | null {
@@ -63,9 +70,11 @@ function portfolioSim(
     for (const b of bars) allDates.add(b.date);
   }
   const dates = Array.from(allDates).sort();
-  const portfolioReturns: number[] = [];
+  const netReturns: number[] = [];
+  const grossReturns: number[] = [];
   const allScores: number[] = [];
   const allReturns: number[] = [];
+  const txCost = getTxCostPct();
 
   for (const date of dates) {
     const day: Array<{ score: number; nextRet: number }> = [];
@@ -81,27 +90,26 @@ function portfolioSim(
     if (day.length < topK) continue;
     day.sort((a, b) => b.score - a.score);
     const top = day.slice(0, topK);
-    portfolioReturns.push(top.reduce((s, d) => s + d.nextRet, 0) / top.length);
+    const gross = top.reduce((s, d) => s + d.nextRet, 0) / top.length;
+    grossReturns.push(gross);
+    const turnover = estimateDailyTurnover(topK, day.length);
+    netReturns.push(applyTransactionCost(gross, turnover, txCost));
     for (const d of day) {
       allScores.push(d.score);
       allReturns.push(d.nextRet);
     }
   }
 
-  const mean =
-    portfolioReturns.reduce((a, b) => a + b, 0) / Math.max(portfolioReturns.length, 1);
-  const variance =
-    portfolioReturns.reduce((s, r) => s + (r - mean) ** 2, 0) /
-    Math.max(portfolioReturns.length - 1, 1);
-  const sharpe = Math.sqrt(variance) > 0 ? (mean / Math.sqrt(variance)) * Math.sqrt(252) : 0;
-  const cumulative = portfolioReturns.reduce((acc, r) => acc * (1 + r / 100), 1);
+  const net = portfolioStats(netReturns);
+  const gross = portfolioStats(grossReturns);
 
   return {
-    days: portfolioReturns.length,
+    days: net.days,
     ic: spearman(allScores, allReturns),
-    sharpe,
-    cumulativeReturn: (cumulative - 1) * 100,
-    avgDailyReturn: mean,
+    sharpe: net.sharpe,
+    cumulativeReturn: net.cumulativeReturn,
+    grossCumulativeReturn: gross.cumulativeReturn,
+    avgDailyReturn: net.avgDailyReturn,
   };
 }
 
@@ -109,6 +117,7 @@ async function main() {
   initDb();
   const model = loadRankerModel(true);
   const symbols = await getWatchlistSymbols();
+  const effectiveBlend = getEffectiveRankerBlend(model);
 
   console.log(`\nApollo Ranker Evaluation — ${symbols.length} symbols\n`);
   if (!model) {
@@ -117,7 +126,10 @@ async function main() {
   }
 
   console.log(`Model trained: ${model.trainedAt.slice(0, 10)} (${model.sampleCount} samples)`);
-  console.log(`Holdout IC: ${model.holdoutMetrics.ic.toFixed(3)} · DA: ${(model.holdoutMetrics.directionalAccuracy * 100).toFixed(1)}%\n`);
+  console.log(
+    `Holdout IC: ${model.holdoutMetrics.ic.toFixed(3)} · DA: ${(model.holdoutMetrics.directionalAccuracy * 100).toFixed(1)}%`
+  );
+  console.log(`Effective ML blend: ${(effectiveBlend * 100).toFixed(0)}% · Tx cost: ${getTxCostPct()}%/turnover\n`);
   console.log("Fetching 1y data...\n");
 
   const seriesBySymbol = new Map<string, OhlcvBar[]>();
@@ -133,7 +145,7 @@ async function main() {
     ]);
     seriesBySymbol.set(symbol, ohlcv);
     sentimentBySymbol.set(symbol, timeline);
-    console.log(" ok");
+    console.log(` ${ohlcv.length} bars`);
   }
 
   const heuristic = portfolioSim(seriesBySymbol, sentimentBySymbol, (f) =>
@@ -145,18 +157,18 @@ async function main() {
   const blended = portfolioSim(seriesBySymbol, sentimentBySymbol, (f) => {
     const h = scoreFeatures(f).score;
     const l = returnToScore(predictReturn(f, model));
-    return blendScores(h, l).score;
+    return blendScores(h, l, effectiveBlend).score;
   });
 
-  console.log("\n── Top-5 equal-weight portfolio (walk-forward) ──\n");
+  console.log("\n── Top-5 portfolio (net of tx costs) ──\n");
   console.log(
     "Strategy".padEnd(14) +
       "IC".padStart(8) +
       "Sharpe".padStart(10) +
-      "CumRet%".padStart(10) +
-      "AvgDay%".padStart(10)
+      "NetRet%".padStart(10) +
+      "GrossRet%".padStart(11)
   );
-  console.log("-".repeat(52));
+  console.log("-".repeat(53));
 
   for (const [name, r] of [
     ["Heuristic", heuristic],
@@ -168,11 +180,11 @@ async function main() {
         r.ic.toFixed(3).padStart(8) +
         r.sharpe.toFixed(2).padStart(10) +
         r.cumulativeReturn.toFixed(2).padStart(10) +
-        r.avgDailyReturn.toFixed(3).padStart(10)
+        r.grossCumulativeReturn.toFixed(2).padStart(11)
     );
   }
 
-  console.log("\nNote: No transaction costs. Re-train weekly: npm run train:ranker\n");
+  console.log("\nRe-train weekly: npm run ingest && npm run train:ranker\n");
 }
 
 main().catch((err) => {

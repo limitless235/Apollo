@@ -19,19 +19,21 @@ export {
   predictRankerScore,
   predictReturn,
   getRankerBlend,
+  getEffectiveRankerBlend,
   blendScores,
   getRankerModelPath,
 } from "./ranker-model";
 export type { RankerModel, RankerMetrics } from "./ranker-model";
 export { trainRidgeRanker, type TrainingSample } from "./train-ridge";
 export { collectWatchlistTrainingData, buildSamplesFromSeries } from "./dataset";
+export { getTxCostPct, applyTransactionCost, estimateDailyTurnover } from "./portfolio-costs";
 
 import { getSymbolEntry } from "@/lib/symbols/registry";
 import { fetchOhlcv, fetchQuoteChange } from "@/lib/prices/yfinance";
 import { getSentimentTimeline, getSentimentMlCoverage } from "@/lib/news/rss-fetcher";
 import { extractFeatures } from "./features";
 import { rankSignals, type SymbolSignal } from "./composite";
-import { loadRankerModel, getRankerBlend } from "./ranker-model";
+import { loadRankerModel, getRankerBlend, getEffectiveRankerBlend } from "./ranker-model";
 
 export async function computeWatchlistSignals(
   items: Array<{ symbol: string; companyName: string }>
@@ -78,5 +80,6 @@ export function getRankerStatus() {
     holdoutIc: model?.holdoutMetrics.ic ?? null,
     holdoutDa: model?.holdoutMetrics.directionalAccuracy ?? null,
     blend: getRankerBlend(),
+    effectiveBlend: getEffectiveRankerBlend(model),
   };
 }

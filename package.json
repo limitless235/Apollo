@@ -15,7 +15,8 @@
     "eval:sentiment": "tsx scripts/eval-sentiment.ts",
     "rescore-sentiment": "tsx scripts/rescore-sentiment.ts",
     "train:ranker": "tsx scripts/train-ranker.ts",
-    "eval:ranker": "tsx scripts/eval-ranker.ts"
+    "eval:ranker": "tsx scripts/eval-ranker.ts",
+    "show:ranks": "tsx scripts/show-ranks.ts"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^2.0.0",

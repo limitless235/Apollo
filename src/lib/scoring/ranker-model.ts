@@ -90,9 +90,19 @@ export function predictRankerScore(
 }
 
 export function getRankerBlend(): number {
-  const raw = Number(process.env.RANKER_BLEND ?? "0.55");
-  if (Number.isNaN(raw)) return 0.55;
+  const raw = Number(process.env.RANKER_BLEND ?? "0.25");
+  if (Number.isNaN(raw)) return 0.25;
   return Math.max(0, Math.min(1, raw));
+}
+
+/** Reduce ML weight when holdout IC is weak — avoids diluting a working heuristic. */
+export function getEffectiveRankerBlend(model: RankerModel | null): number {
+  const configured = getRankerBlend();
+  if (!model) return 0;
+  const ic = model.holdoutMetrics.ic;
+  if (ic < 0) return Math.min(configured, 0.2);
+  if (ic < 0.03) return Math.min(configured, 0.3);
+  return configured;
 }
 
 export function blendScores(

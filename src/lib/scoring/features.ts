@@ -130,11 +130,12 @@ export function extractFeatures(
 export function extractFeaturesAt(
   ohlcv: OhlcvBar[],
   sentimentTimeline: SentimentDay[],
-  asOfDate: string
+  asOfDate: string,
+  sentimentMlCoverage = 0
 ): RawFeatures | null {
   const bars = ohlcv.filter((b) => b.date <= asOfDate);
   if (bars.length < 22) return null;
 
   const sentiment = sentimentTimeline.filter((d) => d.date <= asOfDate);
-  return extractFeatures(bars, sentiment);
+  return extractFeatures(bars, sentiment, sentimentMlCoverage);
 }

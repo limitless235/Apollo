@@ -1,6 +1,6 @@
 import type { RawFeatures } from "./features";
 import type { RankerModel } from "./ranker-model";
-import { blendScores, predictRankerScore } from "./ranker-model";
+import { blendScores, predictRankerScore, getEffectiveRankerBlend } from "./ranker-model";
 
 export interface FeatureContribution {
   key: string;
@@ -160,7 +160,8 @@ export function rankSignals(
   const scored = items.map((item) => {
     const { score: heuristicScore, breakdown, flags } = scoreFeatures(item.features);
     const learnedScore = predictRankerScore(item.features, rankerModel);
-    const blended = blendScores(heuristicScore, learnedScore);
+    const blend = getEffectiveRankerBlend(rankerModel);
+    const blended = blendScores(heuristicScore, learnedScore, blend);
     const finalFlags = [...flags];
     if (blended.rankerActive) finalFlags.push("ML ranker blended");
 

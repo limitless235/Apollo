@@ -2,6 +2,12 @@ import type { OhlcvBar } from "@/lib/prices/yfinance";
 import type { SentimentDay } from "./features";
 import { extractFeaturesAt } from "./features";
 import { scoreFeatures } from "./composite";
+import {
+  applyTransactionCost,
+  estimateDailyTurnover,
+  getTxCostPct,
+  portfolioStats,
+} from "./portfolio-costs";
 
 export interface BacktestDay {
   date: string;
@@ -133,6 +139,8 @@ export interface PortfolioBacktestResult {
   sharpe: number;
   maxDrawdown: number;
   benchmarkReturn: number;
+  grossCumulativeReturn: number;
+  txCostPct: number;
 }
 
 /** Equal-weight top-K by score vs hold-all benchmark (equal weight all symbols). */
@@ -140,7 +148,8 @@ export function backtestPortfolio(
   seriesBySymbol: Map<string, OhlcvBar[]>,
   sentimentBySymbol: Map<string, SentimentDay[]>,
   topK = 5,
-  minHistory = 30
+  minHistory = 30,
+  applyCosts = true
 ): PortfolioBacktestResult {
   const symbols = Array.from(seriesBySymbol.keys());
   if (symbols.length === 0) {
@@ -152,6 +161,8 @@ export function backtestPortfolio(
       sharpe: 0,
       maxDrawdown: 0,
       benchmarkReturn: 0,
+      grossCumulativeReturn: 0,
+      txCostPct: getTxCostPct(),
     };
   }
 
@@ -162,7 +173,9 @@ export function backtestPortfolio(
   const dates = Array.from(allDates).sort();
 
   const portfolioReturns: number[] = [];
+  const grossReturns: number[] = [];
   const benchmarkReturns: number[] = [];
+  const txCost = getTxCostPct();
 
   for (const date of dates) {
     const scores: Array<{ symbol: string; score: number; nextRet: number }> = [];
@@ -185,9 +198,15 @@ export function backtestPortfolio(
 
     if (topReturns.length === 0) continue;
 
-    portfolioReturns.push(
-      topReturns.reduce((a, b) => a + b, 0) / topReturns.length
-    );
+    const gross =
+      topReturns.reduce((a, b) => a + b, 0) / topReturns.length;
+    grossReturns.push(gross);
+
+    const turnover = estimateDailyTurnover(topK, scores.length);
+    const net = applyCosts
+      ? applyTransactionCost(gross, turnover, txCost)
+      : gross;
+    portfolioReturns.push(net);
     benchmarkReturns.push(
       allReturns.reduce((a, b) => a + b, 0) / allReturns.length
     );
@@ -202,42 +221,27 @@ export function backtestPortfolio(
       sharpe: 0,
       maxDrawdown: 0,
       benchmarkReturn: 0,
+      grossCumulativeReturn: 0,
+      txCostPct: getTxCostPct(),
     };
   }
 
-  const cumulative = portfolioReturns.reduce(
-    (acc, r) => acc * (1 + r / 100),
-    1
-  );
+  const netStats = portfolioStats(portfolioReturns);
+  const grossStats = portfolioStats(grossReturns);
   const benchCumulative = benchmarkReturns.reduce(
     (acc, r) => acc * (1 + r / 100),
     1
   );
 
-  const mean =
-    portfolioReturns.reduce((a, b) => a + b, 0) / portfolioReturns.length;
-  const variance =
-    portfolioReturns.reduce((s, r) => s + (r - mean) ** 2, 0) /
-    Math.max(portfolioReturns.length - 1, 1);
-  const std = Math.sqrt(variance);
-  const sharpe = std > 0 ? (mean / std) * Math.sqrt(252) : 0;
-
-  let peak = 1;
-  let maxDrawdown = 0;
-  let equity = 1;
-  for (const r of portfolioReturns) {
-    equity *= 1 + r / 100;
-    peak = Math.max(peak, equity);
-    maxDrawdown = Math.min(maxDrawdown, (equity - peak) / peak);
-  }
-
   return {
-    days: portfolioReturns.length,
+    days: netStats.days,
     topK,
-    avgDailyReturn: mean,
-    cumulativeReturn: (cumulative - 1) * 100,
-    sharpe,
-    maxDrawdown: maxDrawdown * 100,
+    avgDailyReturn: netStats.avgDailyReturn,
+    cumulativeReturn: netStats.cumulativeReturn,
+    sharpe: netStats.sharpe,
+    maxDrawdown: netStats.maxDrawdown,
     benchmarkReturn: (benchCumulative - 1) * 100,
+    grossCumulativeReturn: grossStats.cumulativeReturn,
+    txCostPct: txCost,
   };
 }
