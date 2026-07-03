@@ -54,8 +54,21 @@ export function initDb() {
       company_name TEXT NOT NULL,
       added_at INTEGER NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS portfolio_holdings (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      symbol TEXT NOT NULL,
+      name TEXT NOT NULL,
+      asset_type TEXT NOT NULL,
+      quantity REAL NOT NULL,
+      avg_cost REAL NOT NULL,
+      yfinance_ticker TEXT,
+      notes TEXT,
+      added_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
     CREATE INDEX IF NOT EXISTS idx_articles_published ON articles(published_at);
     CREATE INDEX IF NOT EXISTS idx_daily_sentiment_symbol ON daily_sentiment(symbol, date);
+    CREATE INDEX IF NOT EXISTS idx_portfolio_symbol ON portfolio_holdings(symbol);
   `);
   try {
     sqlite.exec(`ALTER TABLE articles ADD COLUMN sentiment_source TEXT NOT NULL DEFAULT 'rules'`);

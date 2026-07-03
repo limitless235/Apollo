@@ -17,7 +17,7 @@ Personal NSE/BSE news dashboard with price charts, sentiment overlays, and an AI
 
 ```bash
 cp .env.example .env.local
-# Add ANTHROPIC_API_KEY to .env.local
+# Add GOOGLE_GENERATIVE_AI_API_KEY to .env.local (Google AI Studio)
 # Optional: SENTIMENT_MODEL=hybrid (default) | finbert | rules
 
 npm install

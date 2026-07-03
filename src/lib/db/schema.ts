@@ -34,6 +34,21 @@ export const watchlist = sqliteTable("watchlist", {
   addedAt: integer("added_at", { mode: "timestamp" }).notNull(),
 });
 
+export const portfolioHoldings = sqliteTable("portfolio_holdings", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  symbol: text("symbol").notNull(),
+  name: text("name").notNull(),
+  assetType: text("asset_type").notNull(),
+  quantity: real("quantity").notNull(),
+  avgCost: real("avg_cost").notNull(),
+  yfinanceTicker: text("yfinance_ticker"),
+  notes: text("notes"),
+  addedAt: integer("added_at", { mode: "timestamp" }).notNull(),
+  updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
+});
+
 export type Article = typeof articles.$inferSelect;
 export type DailySentiment = typeof dailySentiment.$inferSelect;
 export type WatchlistItem = typeof watchlist.$inferSelect;
+export type PortfolioHolding = typeof portfolioHoldings.$inferSelect;
+export type PortfolioAssetType = "stock" | "etf" | "mf";

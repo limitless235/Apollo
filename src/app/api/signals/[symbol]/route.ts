@@ -4,7 +4,11 @@ import { getWatchlist } from "@/lib/watchlist";
 import { getSymbolEntry } from "@/lib/symbols/registry";
 import { fetchOhlcv } from "@/lib/prices/yfinance";
 import { getSentimentTimeline } from "@/lib/news/rss-fetcher";
-import { computeWatchlistSignals, backtestSymbol } from "@/lib/scoring";
+import {
+  computeWatchlistSignals,
+  backtestSymbol,
+  generateTradeRecommendation,
+} from "@/lib/scoring";
 
 export async function GET(
   _req: Request,
@@ -37,8 +41,39 @@ export async function GET(
 
   const backtest = backtestSymbol(symbol, backtestOhlcv, timeline);
 
+  const chartChange90d =
+    backtestOhlcv.length >= 2
+      ? ((backtestOhlcv[backtestOhlcv.length - 1].close - backtestOhlcv[0].close) /
+          backtestOhlcv[0].close) *
+        100
+      : undefined;
+
+  const recommendation = generateTradeRecommendation({
+    symbol: signal.symbol,
+    companyName: signal.companyName,
+    score: signal.score,
+    heuristicScore: signal.heuristicScore,
+    learnedScore: signal.learnedScore,
+    label: signal.label,
+    rank: signal.rank,
+    watchlistSize: batchItems.length,
+    momentum5d: signal.features.momentum5d,
+    momentum20d: signal.features.momentum20d,
+    avgSentiment7d: signal.features.avgSentiment7d,
+    sentimentDelta: signal.features.sentimentDelta,
+    newsCount7d: signal.features.newsCount7d,
+    volatility20d: signal.features.volatility20d,
+    volumeZScore: signal.features.volumeZScore,
+    changePercent: signal.changePercent,
+    backtestIc: backtest.ic,
+    backtestDa: backtest.directionalAccuracy,
+    backtestDays: backtest.days,
+    chartChange90d,
+  });
+
   return NextResponse.json({
     ...signal,
+    recommendation,
     backtest: {
       days: backtest.days,
       ic: backtest.ic,

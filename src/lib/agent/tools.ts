@@ -7,12 +7,12 @@ import {
   getArticlesForSymbol,
   getSentimentTimeline,
   recomputeDailySentiment,
-  getSentimentMlCoverage,
 } from "@/lib/news/rss-fetcher";
 import { isFinbertAvailable, getSentimentModelLabel, FINBERT_MODEL } from "@/lib/news/sentiment";
 import { fetchOhlcv, fetchQuoteChange, getPriceTrend } from "@/lib/prices/yfinance";
 import { addToWatchlist, getWatchlist } from "@/lib/watchlist";
-import { computeWatchlistSignals, extractFeatures, rankSignals, loadRankerModel, getRankerStatus } from "@/lib/scoring";
+import { getPortfolioHoldings, analyzePortfolio } from "@/lib/portfolio";
+import { computeWatchlistSignals, getRankerStatus, generateTradeRecommendation, backtestSymbol } from "@/lib/scoring";
 
 export const agentTools = {
   resolveSymbol: tool({
@@ -139,7 +139,7 @@ export const agentTools = {
   }),
 
   getSymbolSignal: tool({
-    description: "Get detailed signal breakdown for a single NSE symbol",
+    description: "Get detailed signal breakdown for a single NSE symbol (uses full watchlist batch for ML)",
     inputSchema: z.object({
       symbol: z.string(),
     }),
@@ -147,34 +147,67 @@ export const agentTools = {
       const entry = getSymbolEntry(symbol);
       if (!entry) return { error: `Unknown symbol: ${symbol}` };
 
-      const [ohlcv, timeline, changePercent, mlCoverage] = await Promise.all([
-        fetchOhlcv(entry.yfinanceTicker, 90),
+      const watchlist = await getWatchlist();
+      const batchItems = watchlist.some((w) => w.symbol === entry.symbol)
+        ? watchlist
+        : [...watchlist, { symbol: entry.symbol, companyName: entry.companyName }];
+
+      const [signals, backtestOhlcv, timeline, changePercent] = await Promise.all([
+        computeWatchlistSignals(batchItems),
+        fetchOhlcv(entry.yfinanceTicker, 365),
         getSentimentTimeline(entry.symbol, 60),
         fetchQuoteChange(entry.yfinanceTicker).catch(() => 0),
-        getSentimentMlCoverage(entry.symbol, 7),
       ]);
 
-      const features = extractFeatures(ohlcv, timeline, mlCoverage);
-      const [signal] = rankSignals(
-        [
-          {
-            symbol: entry.symbol,
-            companyName: entry.companyName,
-            features,
-            changePercent,
-          },
-        ],
-        loadRankerModel()
-      );
+      const signal = signals.find((s) => s.symbol === entry.symbol);
+      if (!signal) return { error: `Could not score ${entry.symbol}` };
+
+      const backtest = backtestSymbol(entry.symbol, backtestOhlcv, timeline);
+      const chartChange90d =
+        backtestOhlcv.length >= 2
+          ? ((backtestOhlcv[backtestOhlcv.length - 1].close - backtestOhlcv[0].close) /
+              backtestOhlcv[0].close) *
+            100
+          : undefined;
+
+      const recommendation = generateTradeRecommendation({
+        symbol: signal.symbol,
+        companyName: signal.companyName,
+        score: signal.score,
+        heuristicScore: signal.heuristicScore,
+        learnedScore: signal.learnedScore,
+        label: signal.label,
+        rank: signal.rank,
+        watchlistSize: batchItems.length,
+        momentum5d: signal.features.momentum5d,
+        momentum20d: signal.features.momentum20d,
+        avgSentiment7d: signal.features.avgSentiment7d,
+        sentimentDelta: signal.features.sentimentDelta,
+        newsCount7d: signal.features.newsCount7d,
+        volatility20d: signal.features.volatility20d,
+        volumeZScore: signal.features.volumeZScore,
+        changePercent,
+        backtestIc: backtest.ic,
+        backtestDa: backtest.directionalAccuracy,
+        backtestDays: backtest.days,
+        chartChange90d,
+      });
 
       return {
         symbol: signal.symbol,
+        rank: signal.rank,
         score: signal.score,
         heuristicScore: signal.heuristicScore,
         learnedScore: signal.learnedScore,
         rankerActive: signal.rankerActive,
         label: signal.label,
         flags: signal.flags,
+        recommendation,
+        backtest: {
+          ic: backtest.ic,
+          directionalAccuracy: backtest.directionalAccuracy,
+          days: backtest.days,
+        },
         breakdown: signal.breakdown.map((b) => ({
           factor: b.label,
           raw: b.raw,
@@ -182,6 +215,64 @@ export const agentTools = {
         })),
         features: signal.features,
       };
+    },
+  }),
+
+  getTradeRecommendation: tool({
+    description:
+      "Personal BUY/HOLD/SELL/AVOID opinion for a symbol based on Apollo signals, momentum, sentiment, and backtest",
+    inputSchema: z.object({
+      symbol: z.string(),
+    }),
+    execute: async ({ symbol }) => {
+      const entry = getSymbolEntry(symbol);
+      if (!entry) return { error: `Unknown symbol: ${symbol}` };
+
+      const watchlist = await getWatchlist();
+      const batchItems = watchlist.some((w) => w.symbol === entry.symbol)
+        ? watchlist
+        : [...watchlist, { symbol: entry.symbol, companyName: entry.companyName }];
+
+      const [signals, backtestOhlcv, timeline, changePercent] = await Promise.all([
+        computeWatchlistSignals(batchItems),
+        fetchOhlcv(entry.yfinanceTicker, 365),
+        getSentimentTimeline(entry.symbol, 60),
+        fetchQuoteChange(entry.yfinanceTicker).catch(() => 0),
+      ]);
+
+      const signal = signals.find((s) => s.symbol === entry.symbol);
+      if (!signal) return { error: `Could not score ${entry.symbol}` };
+
+      const backtest = backtestSymbol(entry.symbol, backtestOhlcv, timeline);
+      const chartChange90d =
+        backtestOhlcv.length >= 2
+          ? ((backtestOhlcv[backtestOhlcv.length - 1].close - backtestOhlcv[0].close) /
+              backtestOhlcv[0].close) *
+            100
+          : undefined;
+
+      return generateTradeRecommendation({
+        symbol: signal.symbol,
+        companyName: signal.companyName,
+        score: signal.score,
+        heuristicScore: signal.heuristicScore,
+        learnedScore: signal.learnedScore,
+        label: signal.label,
+        rank: signal.rank,
+        watchlistSize: batchItems.length,
+        momentum5d: signal.features.momentum5d,
+        momentum20d: signal.features.momentum20d,
+        avgSentiment7d: signal.features.avgSentiment7d,
+        sentimentDelta: signal.features.sentimentDelta,
+        newsCount7d: signal.features.newsCount7d,
+        volatility20d: signal.features.volatility20d,
+        volumeZScore: signal.features.volumeZScore,
+        changePercent,
+        backtestIc: backtest.ic,
+        backtestDa: backtest.directionalAccuracy,
+        backtestDays: backtest.days,
+        chartChange90d,
+      });
     },
   }),
 
@@ -219,6 +310,55 @@ export const agentTools = {
     execute: async ({ symbol }) => {
       const entry = await addToWatchlist(symbol);
       return { added: true, symbol: entry.symbol, companyName: entry.companyName };
+    },
+  }),
+
+  getPortfolio: tool({
+    description: "List the user's portfolio holdings (stocks, ETFs, mutual funds) with quantities and cost basis",
+    inputSchema: z.object({}),
+    execute: async () => {
+      const items = await getPortfolioHoldings();
+      return {
+        count: items.length,
+        holdings: items.map((h) => ({
+          id: h.id,
+          symbol: h.symbol,
+          name: h.name,
+          assetType: h.assetType,
+          quantity: h.quantity,
+          avgCost: h.avgCost,
+          notes: h.notes,
+        })),
+      };
+    },
+  }),
+
+  analyzePortfolio: tool({
+    description:
+      "Full portfolio analysis: current value, P&L, allocation, weights, Apollo signals and BUY/HOLD/SELL per holding",
+    inputSchema: z.object({}),
+    execute: async () => {
+      const analysis = await analyzePortfolio();
+      return {
+        ...analysis,
+        holdings: analysis.holdings.map((h) => ({
+          symbol: h.symbol,
+          name: h.name,
+          assetType: h.assetType,
+          quantity: h.quantity,
+          avgCost: h.avgCost,
+          currentPrice: h.currentPrice,
+          investedValue: h.investedValue,
+          currentValue: h.currentValue,
+          pnl: h.pnl,
+          pnlPercent: h.pnlPercent,
+          weight: h.weight,
+          score: h.score,
+          rank: h.rank,
+          label: h.label,
+          recommendation: h.recommendation,
+        })),
+      };
     },
   }),
 };

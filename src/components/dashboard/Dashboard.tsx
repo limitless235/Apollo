@@ -5,7 +5,9 @@ import { WatchlistStrip, type WatchlistCard } from "@/components/dashboard/Watch
 import { SymbolSearch } from "@/components/dashboard/SymbolSearch";
 import { StatChips } from "@/components/dashboard/StatChips";
 import { SignalBreakdown, SignalBadge } from "@/components/dashboard/SignalPanel";
+import { TradeRecommendationPanel } from "@/components/dashboard/TradeRecommendationPanel";
 import type { FeatureContribution, SignalLabel } from "@/lib/scoring/composite";
+import type { TradeRecommendation } from "@/lib/scoring/recommendation";
 import { NewsFeed, type NewsArticle } from "@/components/dashboard/NewsFeed";
 import { PriceChart } from "@/components/charts/PriceChart";
 import { SentimentChart } from "@/components/charts/SentimentChart";
@@ -22,6 +24,8 @@ import {
   RankerInactiveBanner,
   type RankerStatusInfo,
 } from "@/components/dashboard/RankerStatus";
+import { ManagerDeskChat } from "@/components/dashboard/ManagerDeskChat";
+import { PortfolioPanel } from "@/components/dashboard/PortfolioPanel";
 
 interface ChartData {
   symbol: string;
@@ -58,6 +62,7 @@ export function Dashboard() {
   const [ingesting, setIngesting] = useState(false);
   const [sentimentModel, setSentimentModel] = useState<string | null>(null);
   const [rankerStatus, setRankerStatus] = useState<RankerStatusInfo | null>(null);
+  const [portfolioPrompt, setPortfolioPrompt] = useState<string | null>(null);
 
   const [signalDetail, setSignalDetail] = useState<{
     score: number;
@@ -73,6 +78,7 @@ export function Dashboard() {
       directionalAccuracy: number;
       days: number;
     };
+    recommendation?: TradeRecommendation;
   } | null>(null);
 
   const loadWatchlist = useCallback(async () => {
@@ -129,6 +135,7 @@ export function Dashboard() {
       flags: data.flags ?? [],
       breakdown: data.breakdown ?? [],
       backtest: data.backtest,
+      recommendation: data.recommendation,
     });
   }, []);
 
@@ -170,7 +177,16 @@ export function Dashboard() {
       body: JSON.stringify({ symbol }),
     });
     setSelected(symbol);
-    loadWatchlist();
+    await loadWatchlist();
+  };
+
+  const handleSearchPick = async (symbol: string) => {
+    const exists = watchlist.some((w) => w.symbol === symbol);
+    if (!exists) {
+      await handleAddWatchlist(symbol);
+    } else {
+      setSelected(symbol);
+    }
   };
 
   const handleRemoveWatchlist = async (symbol: string) => {
@@ -212,7 +228,7 @@ export function Dashboard() {
 
       <div className="relative z-10 mx-auto flex w-full max-w-[1600px] flex-1 flex-col">
         {/* Header */}
-        <header className="flex flex-wrap items-center justify-between gap-4 border-b border-white/[0.06] px-4 py-4 lg:px-6">
+        <header className="relative z-20 flex flex-wrap items-center justify-between gap-4 overflow-visible border-b border-white/[0.06] px-4 py-4 lg:px-6">
           <div className="flex items-center gap-3">
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-600/20 ring-1 ring-indigo-500/30">
               <ChartLine size={18} className="text-indigo-400" weight="bold" />
@@ -230,7 +246,7 @@ export function Dashboard() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <SymbolSearch onSelect={setSelected} onAdd={handleAddWatchlist} />
+            <SymbolSearch onSelect={handleSearchPick} />
             <ShimmerButton
               onClick={handleIngest}
               disabled={ingesting}
@@ -259,6 +275,22 @@ export function Dashboard() {
               onRemove={handleRemoveWatchlist}
             />
           )}
+        </section>
+
+        {/* Portfolio */}
+        <section className="border-b border-white/[0.06] px-4 py-3 lg:px-6">
+          <PortfolioPanel
+            onSelectSymbol={(symbol) => {
+              setSelected(symbol);
+              const exists = watchlist.some((w) => w.symbol === symbol);
+              if (!exists) void handleAddWatchlist(symbol);
+            }}
+            onAnalyzePortfolio={() =>
+              setPortfolioPrompt(
+                "Analyze my full portfolio using analyzePortfolio. Give portfolio health, trim candidates, hold core, add opportunities, rebalance suggestion, and risks. Use weights and recommendations from Apollo data."
+              )
+            }
+          />
         </section>
 
         {/* Stats + signal row */}
@@ -301,7 +333,10 @@ export function Dashboard() {
                   </p>
                 )}
               </CardHeader>
-              <CardContent className="pt-0">
+              <CardContent className="space-y-4 pt-0">
+                {signalDetail.recommendation && (
+                  <TradeRecommendationPanel recommendation={signalDetail.recommendation} />
+                )}
                 <SignalBreakdown
                   breakdown={signalDetail.breakdown}
                   flags={signalDetail.flags}
@@ -345,9 +380,9 @@ export function Dashboard() {
             </Card>
           </div>
 
-          {/* News column */}
-          <div className="lg:col-span-2">
-            <Card className="flex h-full flex-col border-white/[0.08] bg-white/[0.02]">
+          {/* News + chat column */}
+          <div className="flex flex-col gap-4 lg:col-span-2">
+            <Card className="flex min-h-[280px] flex-1 flex-col border-white/[0.08] bg-white/[0.02]">
               <CardHeader className="border-b border-white/[0.06] pb-3">
                 <div className="flex items-center gap-2">
                   <Newspaper size={16} className="text-indigo-400" />
@@ -359,7 +394,7 @@ export function Dashboard() {
                   )}
                 </div>
               </CardHeader>
-              <CardContent className="flex-1 pt-3">
+              <CardContent className="max-h-[360px] flex-1 overflow-y-auto pt-3">
                 {articles.length === 0 ? (
                   <EmptyNews symbol={selected} />
                 ) : (
@@ -367,11 +402,16 @@ export function Dashboard() {
                 )}
               </CardContent>
             </Card>
+            <ManagerDeskChat
+              selectedSymbol={selected}
+              pendingPrompt={portfolioPrompt}
+              onPendingPromptConsumed={() => setPortfolioPrompt(null)}
+            />
           </div>
         </main>
 
         <footer className="border-t border-white/[0.06] px-4 py-3 text-center text-[11px] text-white/25 lg:px-6">
-          Decision-support tool for personal use. Not investment advice.
+          Personal use only. Trade suggestions are model-driven opinions, not guaranteed outcomes.
         </footer>
       </div>
     </div>

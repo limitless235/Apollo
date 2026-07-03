@@ -1,7 +1,7 @@
 import { initDb, getDb } from "@/lib/db";
 import { watchlist } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
-import { getSymbolEntry, getAllSymbols } from "@/lib/symbols/registry";
+import { getSymbolEntry, getAllSymbols, resolveSymbolEntry } from "@/lib/symbols/registry";
 
 export async function getWatchlist() {
   initDb();
@@ -12,7 +12,7 @@ export async function getWatchlist() {
 export async function addToWatchlist(symbol: string) {
   initDb();
   const db = getDb();
-  const entry = getSymbolEntry(symbol);
+  const entry = (await resolveSymbolEntry(symbol)) ?? getSymbolEntry(symbol);
   if (!entry) throw new Error(`Unknown symbol: ${symbol}`);
 
   await db

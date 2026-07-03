@@ -29,6 +29,12 @@ export type { RankerModel, RankerMetrics } from "./ranker-model";
 export { trainRidgeRanker, type TrainingSample } from "./train-ridge";
 export { collectWatchlistTrainingData, buildSamplesFromSeries } from "./dataset";
 export { getTxCostPct, applyTransactionCost, estimateDailyTurnover } from "./portfolio-costs";
+export {
+  generateTradeRecommendation,
+  type TradeRecommendation,
+  type TradeAction,
+  type RecommendationInput,
+} from "./recommendation";
 
 import { getSymbolEntry } from "@/lib/symbols/registry";
 import { fetchOhlcv, fetchQuoteChange } from "@/lib/prices/yfinance";

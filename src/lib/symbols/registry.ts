@@ -1,4 +1,7 @@
+import fs from "fs";
+import path from "path";
 import symbolsData from "@/data/nse-symbols.json";
+import { searchYahooNseSymbols, searchYahooIndianSymbols, type YahooSearchResult } from "@/lib/prices/yfinance";
 
 export interface SymbolEntry {
   symbol: string;
@@ -7,7 +10,47 @@ export interface SymbolEntry {
   aliases: string[];
 }
 
-const registry: SymbolEntry[] = symbolsData as SymbolEntry[];
+const staticRegistry: SymbolEntry[] = symbolsData as SymbolEntry[];
+const CUSTOM_SYMBOLS_PATH = path.join(process.cwd(), "data", "custom-symbols.json");
+
+let customRegistry: SymbolEntry[] = [];
+let customLoaded = false;
+
+function loadCustomRegistry(): SymbolEntry[] {
+  if (customLoaded) return customRegistry;
+  customLoaded = true;
+  try {
+    if (fs.existsSync(CUSTOM_SYMBOLS_PATH)) {
+      customRegistry = JSON.parse(fs.readFileSync(CUSTOM_SYMBOLS_PATH, "utf-8")) as SymbolEntry[];
+    }
+  } catch {
+    customRegistry = [];
+  }
+  return customRegistry;
+}
+
+function saveCustomRegistry() {
+  fs.mkdirSync(path.dirname(CUSTOM_SYMBOLS_PATH), { recursive: true });
+  fs.writeFileSync(CUSTOM_SYMBOLS_PATH, JSON.stringify(customRegistry, null, 2));
+}
+
+export function registerCustomSymbol(entry: SymbolEntry): SymbolEntry {
+  loadCustomRegistry();
+  const normalized = {
+    ...entry,
+    symbol: entry.symbol.toUpperCase(),
+    aliases: entry.aliases ?? [],
+  };
+  const idx = customRegistry.findIndex((e) => e.symbol === normalized.symbol);
+  if (idx >= 0) customRegistry[idx] = normalized;
+  else customRegistry.push(normalized);
+  saveCustomRegistry();
+  return normalized;
+}
+
+function allRegistry(): SymbolEntry[] {
+  return [...staticRegistry, ...loadCustomRegistry()];
+}
 
 function levenshtein(a: string, b: string): number {
   const matrix: number[][] = [];
@@ -30,12 +73,63 @@ function similarity(a: string, b: string): number {
   return 1 - levenshtein(a.toLowerCase(), b.toLowerCase()) / maxLen;
 }
 
+function scoreEntry(entry: SymbolEntry, q: string): number {
+  const symbol = entry.symbol.toLowerCase();
+  const name = entry.companyName.toLowerCase();
+  let score = 0;
+
+  if (symbol === q) score += 10;
+  else if (symbol.startsWith(q)) score += 6;
+  else if (symbol.includes(q)) score += 3;
+
+  if (name === q) score += 8;
+  else if (name.startsWith(q)) score += 5;
+  else if (name.includes(q)) score += 3;
+
+  for (const word of name.split(/\s+/)) {
+    if (word.startsWith(q)) score += 2;
+  }
+
+  for (const alias of entry.aliases) {
+    const a = alias.toLowerCase();
+    if (a === q) score += 7;
+    else if (a.startsWith(q)) score += 4;
+    else if (a.includes(q)) score += 2;
+  }
+
+  return score;
+}
+
 export function getAllSymbols(): SymbolEntry[] {
-  return registry;
+  return allRegistry();
 }
 
 export function getSymbolEntry(symbol: string): SymbolEntry | undefined {
-  return registry.find((e) => e.symbol.toUpperCase() === symbol.toUpperCase());
+  const upper = symbol.toUpperCase();
+  return allRegistry().find((e) => e.symbol.toUpperCase() === upper);
+}
+
+export function yahooResultToEntry(result: YahooSearchResult): SymbolEntry {
+  return {
+    symbol: result.symbol,
+    companyName: result.companyName,
+    yfinanceTicker: result.yfinanceTicker,
+    aliases: [],
+  };
+}
+
+export async function resolveSymbolEntry(query: string): Promise<SymbolEntry | null> {
+  const q = query.trim();
+  if (!q) return null;
+
+  const existing = resolveSymbol(q);
+  if (existing) return existing;
+
+  const yahoo = await searchYahooNseSymbols(q, 5);
+  const exact = yahoo.find((r) => r.symbol === q.toUpperCase()) ?? yahoo[0];
+  if (!exact) return null;
+
+  return registerCustomSymbol(yahooResultToEntry(exact));
 }
 
 export function resolveSymbol(query: string): SymbolEntry | null {
@@ -43,6 +137,7 @@ export function resolveSymbol(query: string): SymbolEntry | null {
   if (!q) return null;
 
   const upper = q.toUpperCase();
+  const registry = allRegistry();
 
   const exactTicker = registry.find((e) => e.symbol.toUpperCase() === upper);
   if (exactTicker) return exactTicker;
@@ -81,18 +176,53 @@ export function resolveSymbol(query: string): SymbolEntry | null {
 
 export function searchSymbols(query: string, limit = 10): SymbolEntry[] {
   const q = query.trim().toLowerCase();
-  if (!q) return registry.slice(0, limit);
+  if (!q) return allRegistry().slice(0, limit);
 
-  return registry
-    .map((entry) => {
-      let score = 0;
-      if (entry.symbol.toLowerCase().startsWith(q)) score += 3;
-      if (entry.companyName.toLowerCase().includes(q)) score += 2;
-      if (entry.aliases.some((a) => a.toLowerCase().includes(q))) score += 1;
-      return { entry, score };
-    })
+  return allRegistry()
+    .map((entry) => ({ entry, score: scoreEntry(entry, q) }))
     .filter(({ score }) => score > 0)
     .sort((a, b) => b.score - a.score)
     .slice(0, limit)
     .map(({ entry }) => entry);
+}
+
+export async function searchSymbolsWithYahoo(
+  query: string,
+  limit = 10,
+  options: { includeBse?: boolean } = {}
+): Promise<
+  Array<SymbolEntry & { source: "local" | "yahoo"; exchange: "NSE" | "BSE"; yfinanceTicker: string }>
+> {
+  const includeBse = options.includeBse ?? true;
+  const q = query.trim();
+  if (!q) {
+    return searchSymbols("", limit).map((entry) => ({
+      ...entry,
+      source: "local" as const,
+      exchange: "NSE" as const,
+      yfinanceTicker: entry.yfinanceTicker,
+    }));
+  }
+
+  const local = searchSymbols(q, limit).map((entry) => ({
+    ...entry,
+    source: "local" as const,
+    exchange: "NSE" as const,
+    yfinanceTicker: entry.yfinanceTicker,
+  }));
+
+  const localKeys = new Set(local.map((e) => `${e.symbol}:NSE`));
+  const exchanges: Array<"NSE" | "BSE"> = includeBse ? ["NSE", "BSE"] : ["NSE"];
+  const yahoo = await searchYahooIndianSymbols(q, limit, exchanges);
+
+  const remote = yahoo
+    .filter((r) => !localKeys.has(`${r.symbol}:${r.exchange}`))
+    .map((r) => ({
+      ...yahooResultToEntry(r),
+      source: "yahoo" as const,
+      exchange: r.exchange,
+      yfinanceTicker: r.yfinanceTicker,
+    }));
+
+  return [...local, ...remote].slice(0, limit);
 }

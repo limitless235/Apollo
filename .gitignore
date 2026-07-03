@@ -47,3 +47,5 @@ apollo.db-*
 
 # trained ranker (generate with npm run train:ranker)
 data/ranker-model.json
+data/custom-symbols.json
+data/portfolio-holdings.json
