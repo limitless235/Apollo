@@ -16,7 +16,11 @@ export const MARKET_FEEDS = [
   },
 ] as const;
 
-export function googleNewsFeedUrl(companyName: string): string {
-  const query = encodeURIComponent(`${companyName} NSE stock`);
+export function googleNewsFeedUrl(companyName: string, symbol?: string): string {
+  const query = encodeURIComponent(
+    symbol
+      ? `${companyName} ${symbol} India stock`
+      : `${companyName} NSE stock`
+  );
   return `https://news.google.com/rss/search?q=${query}&hl=en-IN&gl=IN&ceid=IN:en`;
 }

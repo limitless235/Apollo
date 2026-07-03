@@ -8,6 +8,7 @@ import { initDb, getDb } from "@/lib/db";
 import { articles, dailySentiment } from "@/lib/db/schema";
 import { eq, and, gte, sql } from "drizzle-orm";
 import { MARKET_FEEDS } from "./feeds";
+import type { NewsIngestTarget } from "./ingest-targets";
 
 const parser = new Parser({
   timeout: 15000,
@@ -18,7 +19,7 @@ const parser = new Parser({
   },
 });
 
-const queue = new PQueue({ concurrency: 1, interval: 1000, intervalCap: 1 });
+const queue = new PQueue({ concurrency: 2, interval: 800, intervalCap: 2 });
 
 export interface NormalizedArticle {
   url: string;
@@ -76,15 +77,19 @@ export async function fetchFeed(url: string): Promise<NormalizedArticle[]> {
   }
 }
 
-export async function fetchCompanyNews(symbol: string): Promise<NormalizedArticle[]> {
+export async function fetchCompanyNews(
+  symbol: string,
+  companyNameOverride?: string
+): Promise<NormalizedArticle[]> {
   const entry = getSymbolEntry(symbol);
-  if (!entry) return [];
+  const companyName = companyNameOverride ?? entry?.companyName;
+  if (!companyName) return [];
 
-  const url = googleNewsFeedUrl(entry.companyName);
+  const url = googleNewsFeedUrl(companyName, symbol);
   const items = await fetchFeed(url);
   return items.map((item) => ({
     ...item,
-    symbols: Array.from(new Set([...item.symbols, entry.symbol])),
+    symbols: Array.from(new Set([...item.symbols, symbol.toUpperCase()])),
   }));
 }
 
@@ -183,29 +188,52 @@ export async function recomputeDailySentiment(symbols: string[]): Promise<void> 
   }
 }
 
-export async function ingestWatchlist(symbols: string[]): Promise<{
+export async function ingestWatchlist(
+  targets: NewsIngestTarget[] | string[]
+): Promise<{
   articlesIngested: number;
   symbolsProcessed: number;
+  symbolCount: number;
+  perSymbol: Array<{ symbol: string; articles: number }>;
 }> {
   initDb();
   let total = 0;
+
+  const normalized: NewsIngestTarget[] = (
+    targets.length > 0 && typeof targets[0] === "string"
+      ? (targets as string[]).map((symbol) => ({
+          symbol,
+          companyName: getSymbolEntry(symbol)?.companyName ?? symbol,
+        }))
+      : (targets as NewsIngestTarget[])
+  ).filter((t) => t.symbol.trim());
 
   for (const feed of MARKET_FEEDS) {
     const items = await fetchFeed(feed.url);
     total += await upsertArticles(items);
   }
 
-  for (const symbol of symbols) {
+  const perSymbol: Array<{ symbol: string; articles: number }> = [];
+
+  for (const { symbol, companyName } of normalized) {
     try {
-      const items = await fetchCompanyNews(symbol);
-      total += await upsertArticles(items);
+      const items = await fetchCompanyNews(symbol, companyName);
+      const count = await upsertArticles(items);
+      total += count;
+      perSymbol.push({ symbol, articles: count });
     } catch (error) {
       console.warn(`Company news failed for ${symbol}:`, error);
+      perSymbol.push({ symbol, articles: 0 });
     }
   }
 
-  await recomputeDailySentiment(symbols);
-  return { articlesIngested: total, symbolsProcessed: symbols.length };
+  await recomputeDailySentiment(normalized.map((t) => t.symbol));
+  return {
+    articlesIngested: total,
+    symbolsProcessed: perSymbol.filter((r) => r.articles > 0).length,
+    symbolCount: normalized.length,
+    perSymbol,
+  };
 }
 
 export async function getArticlesForSymbol(

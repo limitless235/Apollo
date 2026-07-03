@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { initDb } from "@/lib/db";
 import { ingestWatchlist } from "@/lib/news/rss-fetcher";
-import { getWatchlistSymbols } from "@/lib/watchlist";
+import { getNewsIngestTargets } from "@/lib/news/ingest-targets";
+
+export const maxDuration = 300;
 
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get("authorization");
@@ -12,13 +14,13 @@ export async function GET(request: NextRequest) {
   }
 
   initDb();
-  const symbols = await getWatchlistSymbols();
+  const targets = await getNewsIngestTargets();
 
-  if (symbols.length === 0) {
-    return NextResponse.json({ error: "Watchlist empty" }, { status: 400 });
+  if (targets.length === 0) {
+    return NextResponse.json({ error: "No symbols to ingest" }, { status: 400 });
   }
 
-  const result = await ingestWatchlist(symbols);
+  const result = await ingestWatchlist(targets);
   return NextResponse.json({
     ok: true,
     ...result,

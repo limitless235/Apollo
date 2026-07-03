@@ -1,6 +1,6 @@
 import { initDb } from "@/lib/db";
 import { ingestWatchlist } from "@/lib/news/rss-fetcher";
-import { getWatchlistSymbols } from "@/lib/watchlist";
+import { getNewsIngestTargets } from "@/lib/news/ingest-targets";
 import { isFinbertAvailable, FINBERT_MODEL } from "@/lib/news/sentiment";
 
 async function main() {
@@ -10,10 +10,17 @@ async function main() {
 
   console.log(`\nApollo ingest — sentiment: ${mode}${finbertReady ? ` (${FINBERT_MODEL})` : " (rules fallback)"}\n`);
 
-  const symbols = await getWatchlistSymbols();
-  console.log(`Ingesting news for ${symbols.length} symbols...`);
-  const result = await ingestWatchlist(symbols);
-  console.log(`Done: ${result.articlesIngested} articles, ${result.symbolsProcessed} symbols`);
+  const targets = await getNewsIngestTargets();
+  console.log(`Ingesting news for ${targets.length} symbols (watchlist + portfolio)...`);
+  const result = await ingestWatchlist(targets);
+  console.log(
+    `Done: ${result.articlesIngested} articles, ${result.symbolsProcessed}/${result.symbolCount} symbols with news`
+  );
+
+  const empty = result.perSymbol.filter((r) => r.articles === 0).map((r) => r.symbol);
+  if (empty.length > 0) {
+    console.log(`No articles returned for: ${empty.join(", ")}`);
+  }
 
   if (!finbertReady && mode !== "rules") {
     console.log("\nTip: FinBERT did not load — articles scored with keyword rules.");

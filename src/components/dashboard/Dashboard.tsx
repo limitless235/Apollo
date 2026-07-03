@@ -60,6 +60,7 @@ export function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [chartLoading, setChartLoading] = useState(false);
   const [ingesting, setIngesting] = useState(false);
+  const [ingestStatus, setIngestStatus] = useState<string | null>(null);
   const [sentimentModel, setSentimentModel] = useState<string | null>(null);
   const [rankerStatus, setRankerStatus] = useState<RankerStatusInfo | null>(null);
   const [portfolioPrompt, setPortfolioPrompt] = useState<string | null>(null);
@@ -200,8 +201,17 @@ export function Dashboard() {
 
   const handleIngest = async () => {
     setIngesting(true);
+    setIngestStatus(null);
     try {
-      await fetch("/api/cron/ingest-news");
+      const res = await fetch("/api/cron/ingest-news");
+      const data = await res.json();
+      if (data.ok) {
+        setIngestStatus(
+          `Pulled ${data.articlesIngested} articles for ${data.symbolsProcessed}/${data.symbolCount} symbols`
+        );
+      } else {
+        setIngestStatus(data.error ?? "Ingest failed");
+      }
       await loadWatchlist();
       await loadChart(selected);
       await loadSignalDetail(selected);
@@ -256,6 +266,9 @@ export function Dashboard() {
               {ingesting ? "Pulling…" : "Pull news"}
             </ShimmerButton>
             {ingesting && <span className="live-pulse" title="Ingesting" />}
+            {ingestStatus && !ingesting && (
+              <span className="text-[11px] text-white/40">{ingestStatus}</span>
+            )}
           </div>
         </header>
 
