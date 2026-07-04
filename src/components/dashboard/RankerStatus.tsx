@@ -11,6 +11,8 @@ export interface RankerStatusInfo {
   effectiveBlend?: number | null;
   blend?: number | null;
   ridgeLambda?: number | null;
+  icIR?: number | null;
+  icTStat?: number | null;
 }
 
 export function RankerHeaderHint({ ranker }: { ranker: RankerStatusInfo | null }) {
@@ -18,12 +20,16 @@ export function RankerHeaderHint({ ranker }: { ranker: RankerStatusInfo | null }
 
   const parts: string[] = ["ML ranker"];
   if (ranker.version != null) parts[0] = `ML v${ranker.version}`;
+  if (ranker.forwardDays) parts.push(`${ranker.forwardDays}d`);
   if (ranker.crossSectional) parts.push("CS");
   if (ranker.effectiveBlend != null) {
     parts.push(`${(ranker.effectiveBlend * 100).toFixed(0)}% blend`);
   }
   if (ranker.holdoutIc != null) {
     parts.push(`IC ${ranker.holdoutIc.toFixed(3)}`);
+  }
+  if (ranker.icTStat != null) {
+    parts.push(`t=${ranker.icTStat.toFixed(1)}`);
   }
 
   return <span className="text-emerald-400/70"> · {parts.join(" · ")}</span>;

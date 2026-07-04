@@ -7,131 +7,22 @@ import { getWatchlistSymbols } from "../src/lib/watchlist";
 import { getSymbolEntry } from "../src/lib/symbols/registry";
 import { fetchOhlcv } from "../src/lib/prices/yfinance";
 import { getSentimentTimeline } from "../src/lib/news/rss-fetcher";
+import type { SentimentDay } from "../src/lib/scoring/features";
 import {
-  extractFeaturesAt,
-  scoreFeatures,
   loadRankerModel,
-  predictRankerScoresBatch,
-  blendScores,
-  getEffectiveRankerBlend,
-  getTxCostPct,
-  type SentimentDay,
-  type RawFeatures,
+  getMlWeight,
 } from "../src/lib/scoring";
-import type { RankerModel } from "../src/lib/scoring/ranker-model";
-import {
-  applyTransactionCost,
-  estimateDailyTurnover,
-  portfolioStats,
-} from "../src/lib/scoring/portfolio-costs";
+import { getRoundTripCostPct } from "../src/lib/scoring/portfolio-costs";
+import { runPortfolioSimulation, compareStrategyIC } from "../src/lib/scoring/portfolio-simulator";
+import { getScoringMode } from "../src/lib/scoring/score-blend";
 import type { OhlcvBar } from "../src/lib/prices/yfinance";
 
-function nextDayReturn(bars: OhlcvBar[], date: string): number | null {
-  const idx = bars.findIndex((b) => b.date === date);
-  if (idx < 0 || idx >= bars.length - 1) return null;
-  const curr = bars[idx].close;
-  const next = bars[idx + 1].close;
-  if (curr <= 0) return null;
-  return ((next - curr) / curr) * 100;
-}
-
-function spearman(x: number[], y: number[]): number {
-  if (x.length !== y.length || x.length < 3) return 0;
-  function ranks(values: number[]) {
-    const indexed = values.map((v, i) => ({ v, i }));
-    indexed.sort((a, b) => a.v - b.v);
-    const result = new Array<number>(values.length);
-    indexed.forEach((item, rank) => {
-      result[item.i] = rank + 1;
-    });
-    return result;
-  }
-  const rx = ranks(x);
-  const ry = ranks(y);
-  const n = x.length;
-  let sumD2 = 0;
-  for (let i = 0; i < n; i++) {
-    const d = rx[i] - ry[i];
-    sumD2 += d * d;
-  }
-  return 1 - (6 * sumD2) / (n * (n * n - 1));
-}
-
-function portfolioSim(
-  seriesBySymbol: Map<string, OhlcvBar[]>,
-  sentimentBySymbol: Map<string, SentimentDay[]>,
-  mode: "heuristic" | "learned" | "blended",
-  model: RankerModel | null,
-  effectiveBlend: number,
-  topK = 5,
-  minHistory = 30
-) {
-  const symbols = Array.from(seriesBySymbol.keys());
-  const allDates = new Set<string>();
-  for (const bars of seriesBySymbol.values()) {
-    for (const b of bars) allDates.add(b.date);
-  }
-  const dates = Array.from(allDates).sort();
-  const netReturns: number[] = [];
-  const grossReturns: number[] = [];
-  const allScores: number[] = [];
-  const allReturns: number[] = [];
-  const txCost = getTxCostPct();
-
-  for (const date of dates) {
-    const day: Array<{ features: RawFeatures; nextRet: number }> = [];
-    for (const symbol of symbols) {
-      const bars = seriesBySymbol.get(symbol)!;
-      const sentiment = sentimentBySymbol.get(symbol) ?? [];
-      const features = extractFeaturesAt(bars, sentiment, date);
-      if (!features) continue;
-      const nextRet = nextDayReturn(bars, date);
-      if (nextRet == null) continue;
-      day.push({ features, nextRet });
-    }
-    if (day.length < topK) continue;
-
-    const features = day.map((d) => d.features);
-    const heuristicScores = features.map((f) => scoreFeatures(f).score);
-    const learnedScores = predictRankerScoresBatch(features, model);
-
-    const scores = day.map((_, i) => {
-      if (mode === "heuristic") return heuristicScores[i];
-      if (mode === "learned") return learnedScores[i] ?? heuristicScores[i];
-      return blendScores(heuristicScores[i], learnedScores[i], effectiveBlend).score;
-    });
-
-    const ranked = scores.map((score, i) => ({ score, nextRet: day[i].nextRet }));
-    ranked.sort((a, b) => b.score - a.score);
-    const top = ranked.slice(0, topK);
-    const gross = top.reduce((s, d) => s + d.nextRet, 0) / top.length;
-    grossReturns.push(gross);
-    const turnover = estimateDailyTurnover(topK, ranked.length);
-    netReturns.push(applyTransactionCost(gross, turnover, txCost));
-    for (const d of ranked) {
-      allScores.push(d.score);
-      allReturns.push(d.nextRet);
-    }
-  }
-
-  const net = portfolioStats(netReturns);
-  const gross = portfolioStats(grossReturns);
-
-  return {
-    days: net.days,
-    ic: spearman(allScores, allReturns),
-    sharpe: net.sharpe,
-    cumulativeReturn: net.cumulativeReturn,
-    grossCumulativeReturn: gross.cumulativeReturn,
-    avgDailyReturn: net.avgDailyReturn,
-  };
-}
+const REBALANCE_FREQS = [1, 3, 5] as const;
 
 async function main() {
   initDb();
   const model = loadRankerModel(true);
   const symbols = await getWatchlistSymbols();
-  const effectiveBlend = getEffectiveRankerBlend(model);
 
   console.log(`\nApollo Ranker Evaluation — ${symbols.length} symbols\n`);
   if (!model) {
@@ -139,14 +30,23 @@ async function main() {
     process.exit(1);
   }
 
-  console.log(`Model trained: ${model.trainedAt.slice(0, 10)} (${model.sampleCount} samples)`);
-  console.log(
-    `Holdout daily IC: ${model.holdoutMetrics.ic.toFixed(3)} · DA: ${(model.holdoutMetrics.directionalAccuracy * 100).toFixed(1)}%`
-  );
-  if (model.crossSectional) {
-    console.log(`Mode: v${model.version} cross-sectional · λ=${model.ridgeLambda}`);
+  const mlWeight = getMlWeight(model);
+  const scoringMode = getScoringMode();
+  const rtCost = getRoundTripCostPct();
+
+  console.log(`Model: v${model.version} · trained ${model.trainedAt.slice(0, 10)}`);
+  console.log(`Forward target: ${model.forwardDays ?? "?"}d ${model.targetType ?? "excess"}`);
+  if (model.icSignificance) {
+    const s = model.icSignificance;
+    console.log(
+      `Walk-forward IC: ${s.meanIC.toFixed(3)} · IR ${s.icIR.toFixed(2)} · t=${s.tStat.toFixed(2)} (${s.nDays} days)`
+    );
+    if (Math.abs(s.tStat) < 2) {
+      console.log("  ⚠ t-stat < 2 — signal may be indistinguishable from noise");
+    }
   }
-  console.log(`Effective ML blend: ${(effectiveBlend * 100).toFixed(0)}% · Tx cost: ${getTxCostPct()}%/turnover\n`);
+  console.log(`Blend: ML ${(mlWeight * 100).toFixed(0)}% / heuristic ${((1 - mlWeight) * 100).toFixed(0)}% · mode=${scoringMode}`);
+  console.log(`Round-trip cost: ${rtCost.toFixed(3)}% per full rebalance\n`);
   console.log("Fetching 1y data...\n");
 
   const seriesBySymbol = new Map<string, OhlcvBar[]>();
@@ -165,53 +65,49 @@ async function main() {
     console.log(` ${ohlcv.length} bars`);
   }
 
-  const heuristic = portfolioSim(
-    seriesBySymbol,
-    sentimentBySymbol,
-    "heuristic",
-    model,
-    effectiveBlend
-  );
-  const learned = portfolioSim(
-    seriesBySymbol,
-    sentimentBySymbol,
-    "learned",
-    model,
-    effectiveBlend
-  );
-  const blended = portfolioSim(
-    seriesBySymbol,
-    sentimentBySymbol,
-    "blended",
-    model,
-    effectiveBlend
-  );
+  const icCompare = compareStrategyIC(seriesBySymbol, sentimentBySymbol, model);
+  console.log("\n── Strategy IC (daily, walk-forward style on 1y data) ──");
+  console.log(`  Heuristic: ${icCompare.heuristicIC.toFixed(3)}`);
+  console.log(`  ML only:   ${icCompare.mlIC.toFixed(3)}`);
+  console.log(`  Blended:   ${icCompare.blendIC.toFixed(3)}`);
 
-  console.log("\n── Top-5 portfolio (net of tx costs) ──\n");
-  console.log(
-    "Strategy".padEnd(14) +
-      "IC".padStart(8) +
-      "Sharpe".padStart(10) +
-      "NetRet%".padStart(10) +
-      "GrossRet%".padStart(11)
-  );
-  console.log("-".repeat(53));
+  console.log("\n── Top-5 portfolio (gross vs net of NSE costs) ──\n");
 
-  for (const [name, r] of [
-    ["Heuristic", heuristic],
-    ["Learned", learned],
-    ["Blended", blended],
-  ] as const) {
+  for (const freq of REBALANCE_FREQS) {
+    console.log(`Rebalance every ${freq} day(s):`);
     console.log(
-      name.padEnd(14) +
-        r.ic.toFixed(3).padStart(8) +
-        r.sharpe.toFixed(2).padStart(10) +
-        r.cumulativeReturn.toFixed(2).padStart(10) +
-        r.grossCumulativeReturn.toFixed(2).padStart(11)
+      "Strategy".padEnd(14) +
+        "IC".padStart(8) +
+        "Sharpe".padStart(10) +
+        "NetRet%".padStart(10) +
+        "GrossRet%".padStart(11) +
+        "MaxDD%".padStart(10)
     );
+    console.log("-".repeat(63));
+
+    for (const strategy of ["heuristic", "learned", "blend"] as const) {
+      const r = runPortfolioSimulation(seriesBySymbol, sentimentBySymbol, {
+        strategy,
+        rebalanceEvery: freq,
+        applyCosts: true,
+        model,
+        mlWeight,
+        scoringMode,
+      });
+      console.log(
+        strategy.padEnd(14) +
+          r.ic.toFixed(3).padStart(8) +
+          r.sharpe.toFixed(2).padStart(10) +
+          r.cumulativeReturn.toFixed(2).padStart(10) +
+          r.grossCumulativeReturn.toFixed(2).padStart(11) +
+          r.maxDrawdown.toFixed(1).padStart(10)
+      );
+    }
+    console.log("");
   }
 
-  console.log("\nRe-train weekly: npm run ingest && npm run train:ranker\n");
+  console.log("Note: backtest uses today's watchlist projected over history (survivorship bias).");
+  console.log("Re-train: npm run ingest && npm run train:ranker\n");
 }
 
 main().catch((err) => {

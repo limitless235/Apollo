@@ -47,8 +47,21 @@ export const portfolioHoldings = sqliteTable("portfolio_holdings", {
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
 });
 
+export const earningsEvents = sqliteTable(
+  "earnings_events",
+  {
+    symbol: text("symbol").notNull(),
+    eventDate: text("event_date").notNull(),
+    actualEps: real("actual_eps"),
+    estimateEps: real("estimate_eps"),
+    source: text("source").notNull(),
+  },
+  (table) => [uniqueIndex("earnings_symbol_date").on(table.symbol, table.eventDate)]
+);
+
 export type Article = typeof articles.$inferSelect;
 export type DailySentiment = typeof dailySentiment.$inferSelect;
 export type WatchlistItem = typeof watchlist.$inferSelect;
 export type PortfolioHolding = typeof portfolioHoldings.$inferSelect;
+export type EarningsEventRow = typeof earningsEvents.$inferSelect;
 export type PortfolioAssetType = "stock" | "etf" | "mf";

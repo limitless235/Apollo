@@ -69,6 +69,10 @@ export async function GET(
     backtestDa: backtest.directionalAccuracy,
     backtestDays: backtest.days,
     chartChange90d,
+    trendStrength: signal.features.trendStrength,
+    singleDaySpike: signal.flags.includes("Single-day spike (unconfirmed)"),
+    recentEarningsReaction: signal.flags.includes("Recent earnings reaction"),
+    postEarningsReturn3d: signal.features.postEarningsReturn3d,
   });
 
   return NextResponse.json({

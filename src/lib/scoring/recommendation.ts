@@ -33,6 +33,13 @@ export interface RecommendationInput {
   backtestDa?: number;
   backtestDays?: number;
   chartChange90d?: number;
+  /** % above (+) / below (-) long-term average. */
+  trendStrength?: number;
+  /** True when most of the recent move came from a single day. */
+  singleDaySpike?: boolean;
+  /** True when earnings overlay is active for this symbol. */
+  recentEarningsReaction?: boolean;
+  postEarningsReturn3d?: number;
 }
 
 function confidenceFrom(
@@ -73,6 +80,10 @@ export function generateTradeRecommendation(input: RecommendationInput): TradeRe
     backtestDa,
     backtestDays,
     chartChange90d,
+    trendStrength = 0,
+    singleDaySpike = false,
+    recentEarningsReaction = false,
+    postEarningsReturn3d = 0,
   } = input;
 
   const reasons: string[] = [];
@@ -81,6 +92,7 @@ export function generateTradeRecommendation(input: RecommendationInput): TradeRe
 
   const topTier = rank <= Math.max(3, Math.ceil(watchlistSize * 0.1));
   const parabolic = momentum20d >= 35 || (chartChange90d != null && chartChange90d >= 80);
+  const belowTrend = trendStrength <= -3;
   const weakNews = newsCount7d === 0;
   const strongNews = newsCount7d >= 5;
   const bullishMomentum = momentum5d > 0 && momentum20d > 0;
@@ -107,9 +119,24 @@ export function generateTradeRecommendation(input: RecommendationInput): TradeRe
     reasons.push("Rank and momentum look hot, but entry here is statistically risky");
     if (topTier) reasons.push(`Still ranked #${rank} on your watchlist for attention`);
   } else if (
+    belowTrend &&
+    bullishMomentum &&
+    (label === "Strong Bullish" || label === "Bullish" || score >= 0.08)
+  ) {
+    action = "HOLD";
+    reasons.push(
+      `Momentum is up (+${momentum20d.toFixed(1)}% 20d) but price is still ${Math.abs(trendStrength).toFixed(0)}% below its long-term average`
+    );
+    reasons.push("Looks like a bounce within a downtrend — wait for the long-term trend to turn");
+    risks.push(
+      `Below long-term trend (${trendStrength.toFixed(0)}%) — recovery rallies often fade`
+    );
+    if (singleDaySpike) risks.push("Most of the recent pop came in one day — unconfirmed");
+  } else if (
     (label === "Strong Bullish" || (label === "Bullish" && topTier && score >= 0.12)) &&
     bullishMomentum &&
-    !parabolic
+    !parabolic &&
+    !belowTrend
   ) {
     action = "BUY";
     reasons.push(`${label} signal (score ${score.toFixed(2)}, rank #${rank})`);
@@ -151,6 +178,23 @@ export function generateTradeRecommendation(input: RecommendationInput): TradeRe
   }
   if (changePercent <= -3) {
     risks.push(`Down ${Math.abs(changePercent).toFixed(1)}% today — wait for stabilization before adding`);
+  }
+  if (singleDaySpike && action === "BUY") {
+    risks.push("Recent move is largely a single-day spike — prefer confirmation before sizing up");
+  }
+  if (trendStrength >= 5 && (action === "BUY" || action === "HOLD")) {
+    reasons.push(`Trading ${trendStrength.toFixed(0)}% above its long-term average (uptrend intact)`);
+  }
+  if (recentEarningsReaction) {
+    const direction =
+      postEarningsReturn3d >= 1
+        ? "positive"
+        : postEarningsReturn3d <= -1
+          ? "negative"
+          : "mixed";
+    reasons.push(
+      `Recent earnings reaction (${direction}, ${postEarningsReturn3d >= 0 ? "+" : ""}${postEarningsReturn3d.toFixed(1)}% 3d post-print) nudged the score`
+    );
   }
 
   const confidence = confidenceFrom(action, score, backtestIc, newsCount7d);

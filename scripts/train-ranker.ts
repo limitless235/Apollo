@@ -21,9 +21,9 @@ async function main() {
   }
 
   console.log(`\nApollo Ranker Training — ${symbols.length} symbols\n`);
-  console.log("Collecting walk-forward samples (~2y OHLCV + sentiment)...");
+  console.log("Collecting walk-forward samples (~2y OHLCV + sentiment, 5d forward target)...");
 
-  const samples = await collectWatchlistTrainingData(symbols, 500);
+  const samples = await collectWatchlistTrainingData(symbols, 500, 5);
   console.log(`  Samples: ${samples.length}`);
 
   if (samples.length < 80) {
@@ -32,12 +32,15 @@ async function main() {
   }
 
   const model = trainRidgeRanker(samples, {
-    holdoutRatio: 0.25,
     tuneLambda: true,
     useRecencyWeights: true,
+    forwardDays: 5,
+    targetType: "rank",
+    nFolds: 6,
+    logFolds: true,
   });
   if (!model) {
-    console.log("\nTraining failed — insufficient data after holdout split.");
+    console.log("\nTraining failed — insufficient data after walk-forward split.");
     process.exit(1);
   }
 
@@ -46,25 +49,40 @@ async function main() {
 
   console.log(`\n── Model saved → ${outPath} ──\n`);
   console.log(`Type: v${model.version} cross-sectional ridge (λ=${model.ridgeLambda})`);
-  console.log("\nTrain set:");
-  console.log(`  Daily IC:  ${model.trainMetrics.ic.toFixed(3)}  (ranking metric)`);
-  if (model.trainMetrics.pooledIc != null) {
-    console.log(`  Pooled IC: ${model.trainMetrics.pooledIc.toFixed(3)}`);
+  console.log(`Target: ${model.targetType ?? "excess"} · ${model.forwardDays ?? 1}d forward`);
+  console.log(`Features: ${model.featureNames.length}`);
+  console.log(
+    `Blend weights: ML ${((model.mlWeight ?? 0) * 100).toFixed(0)}% / heuristic ${((model.heuristicWeight ?? 0) * 100).toFixed(0)}%`
+  );
+  console.log(`  (from walk-forward IC: heuristic ${(model.heuristicIC ?? 0).toFixed(3)}, ML ${(model.mlIC ?? 0).toFixed(3)})`);
+
+  if (model.icSignificance) {
+    const s = model.icSignificance;
+    console.log("\nWalk-forward aggregate:");
+    console.log(`  Mean IC:  ${s.meanIC.toFixed(3)}`);
+    console.log(`  IC IR:    ${s.icIR.toFixed(3)}  (stability — higher is better)`);
+    console.log(`  t-stat:   ${s.tStat.toFixed(2)}  (${s.nDays} independent test days)`);
+    if (Math.abs(s.tStat) < 2) {
+      console.log("  ⚠ t-stat < 2 — cannot reject null hypothesis (signal may be noise)");
+    }
   }
-  console.log(`  DA:  ${(model.trainMetrics.directionalAccuracy * 100).toFixed(1)}%`);
-  console.log(`  MAE: ${model.trainMetrics.mae.toFixed(3)}%`);
-  console.log("\nHoldout set (honest estimate):");
-  console.log(`  Daily IC:  ${model.holdoutMetrics.ic.toFixed(3)}  (research: 0.03–0.08 meaningful)`);
-  if (model.holdoutMetrics.pooledIc != null) {
-    console.log(`  Pooled IC: ${model.holdoutMetrics.pooledIc.toFixed(3)}`);
+
+  if (model.walkForwardFolds?.length) {
+    console.log("\nFold-by-fold holdout:");
+    for (const f of model.walkForwardFolds) {
+      console.log(
+        `  Fold ${f.fold} (${f.testStart} → ${f.testEnd}): IC ${f.meanIC.toFixed(3)} · IR ${f.icIR.toFixed(2)} · t=${f.tStat.toFixed(2)} · ${f.nDays}d`
+      );
+    }
   }
-  console.log(`  DA:  ${(model.holdoutMetrics.directionalAccuracy * 100).toFixed(1)}%`);
-  console.log(`  MAE: ${model.holdoutMetrics.mae.toFixed(3)}%`);
+
   console.log("\nTop feature weights (standardized):");
   model.featureNames.forEach((name, i) => {
     console.log(`  ${name.padEnd(22)} ${model.weights[i] >= 0 ? "+" : ""}${model.weights[i].toFixed(4)}`);
   });
-  console.log("\nSet RANKER_BLEND=0.25 in .env.local (default). Restart dev server.\n");
+
+  console.log("\nSet SCORING_MODE=blend|ml_only|heuristic_only in .env.local");
+  console.log("Re-train weekly: npm run ingest && npm run train:ranker\n");
 }
 
 main().catch((err) => {

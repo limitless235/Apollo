@@ -47,11 +47,21 @@ export function SignalBadge({
 
 function formatRaw(key: string, raw: number): string {
   if (key.includes("momentum")) return `${raw >= 0 ? "+" : ""}${raw.toFixed(1)}%`;
+  if (key === "trendStrength")
+    return `${raw >= 0 ? "+" : ""}${raw.toFixed(1)}% vs avg`;
   if (key === "volatility20d") return `${raw.toFixed(1)}% ann.`;
   if (key.includes("Sentiment") || key === "sentimentDelta")
     return raw >= 0 ? `+${raw.toFixed(2)}` : raw.toFixed(2);
   if (key === "newsCount7d") return String(Math.round(raw));
   return raw.toFixed(2);
+}
+
+/** Cautionary flags get a warning tint so they read as risks, not endorsements. */
+const CAUTION_FLAG = /below|spike|downtrend|deteriorat|high volatility/i;
+function flagStyle(flag: string): string {
+  return CAUTION_FLAG.test(flag)
+    ? "bg-amber-500/10 text-amber-300/90 ring-amber-500/20"
+    : "bg-indigo-500/10 text-indigo-300/90 ring-indigo-500/20";
 }
 
 export function SignalBreakdown({
@@ -97,7 +107,10 @@ export function SignalBreakdown({
           {flags.map((flag) => (
             <span
               key={flag}
-              className="rounded-md bg-indigo-500/10 px-2 py-0.5 text-[10px] text-indigo-300/90 ring-1 ring-indigo-500/20"
+              className={cn(
+                "rounded-md px-2 py-0.5 text-[10px] ring-1",
+                flagStyle(flag)
+              )}
             >
               {flag}
             </span>

@@ -1,5 +1,5 @@
 import type { TrainingSample } from "./train-ridge";
-import { featuresToVector } from "./feature-vector";
+import { featuresToVector, getActiveRankerFeatureKeys } from "./feature-vector";
 
 export const MIN_CROSS_SECTION = 5;
 export const RETURN_WINSORIZE_PCT = 5;
@@ -64,8 +64,14 @@ export interface PreparedSample {
 
 /** Demean returns within each date and winsorize — aligns training with ranking. */
 export function prepareCrossSectionalSamples(
-  samples: TrainingSample[]
+  samples: TrainingSample[],
+  options: {
+    targetType?: "excess" | "rank";
+    featureKeys?: readonly string[];
+  } = {}
 ): PreparedSample[] {
+  const targetType = options.targetType ?? "excess";
+  const featureKeys = options.featureKeys ?? getActiveRankerFeatureKeys();
   const byDate = new Map<string, TrainingSample[]>();
   for (const s of samples) {
     const list = byDate.get(s.date) ?? [];
@@ -76,7 +82,9 @@ export function prepareCrossSectionalSamples(
   const prepared: PreparedSample[] = [];
 
   for (const [date, daySamples] of byDate) {
-    const rawVectors = daySamples.map((s) => featuresToVector(s.features));
+    const rawVectors = daySamples.map((s) =>
+      featuresToVector(s.features, featureKeys)
+    );
     const csVectors =
       daySamples.length >= MIN_CROSS_SECTION
         ? crossSectionalZScoreRows(rawVectors)
@@ -86,19 +94,50 @@ export function prepareCrossSectionalSamples(
     const median =
       [...returns].sort((a, b) => a - b)[Math.floor(returns.length / 2)] ?? 0;
 
+    // Rank targets: map raw forward returns to [-1, 1] within the day's universe.
+    const rankTargets =
+      targetType === "rank" && returns.length >= 2
+        ? rankNormalize(returns)
+        : null;
+
     daySamples.forEach((s, i) => {
-      const excess = winsorize(s.nextReturn - median);
+      const target =
+        rankTargets != null
+          ? rankTargets[i]
+          : winsorize(s.nextReturn - median);
       prepared.push({
         date: s.date,
         symbol: s.symbol,
         vector: csVectors[i],
-        target: excess,
+        target,
         rawReturn: s.nextReturn,
       });
     });
   }
 
   return prepared.sort((a, b) => a.date.localeCompare(b.date));
+}
+
+/** Convert values to percentile ranks in [-1, 1] (higher value → higher rank). */
+export function toRankScore(values: number[]): number[] {
+  const n = values.length;
+  if (n < 2) return values.map(() => 0);
+
+  const order = values
+    .map((r, i) => ({ r, i }))
+    .sort((a, b) => a.r - b.r);
+
+  const ranks = new Array<number>(n);
+  order.forEach((item, rank) => {
+    ranks[item.i] = rank;
+  });
+
+  return ranks.map((rank) => (2 * rank) / (n - 1) - 1);
+}
+
+/** @deprecated use toRankScore */
+function rankNormalize(returns: number[]): number[] {
+  return toRankScore(returns);
 }
 
 /** Average daily Spearman IC — the metric that matches portfolio ranking. */

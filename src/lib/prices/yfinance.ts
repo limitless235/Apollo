@@ -38,7 +38,9 @@ function rangeForDays(days: number): string {
   if (days <= 90) return "3mo";
   if (days <= 180) return "6mo";
   if (days <= 365) return "1y";
-  return "2y";
+  if (days <= 730) return "2y";
+  if (days <= 1825) return "5y";
+  return "max";
 }
 
 export async function fetchOhlcv(
@@ -84,8 +86,10 @@ export async function fetchOhlcv(
       })
       .filter((bar): bar is OhlcvBar => bar !== null);
 
-    cache.set(cacheKey, { data, expires: Date.now() + CACHE_TTL });
-    return data;
+    const trimmed = days > 0 && data.length > days ? data.slice(-days) : data;
+
+    cache.set(cacheKey, { data: trimmed, expires: Date.now() + CACHE_TTL });
+    return trimmed;
   } catch (error) {
     console.error(`Yahoo chart error for ${yfinanceTicker}:`, error);
     return cached?.data ?? [];

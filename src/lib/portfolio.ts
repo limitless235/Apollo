@@ -526,6 +526,8 @@ export async function analyzePortfolio(): Promise<PortfolioAnalysis> {
           backtestDa: backtest.directionalAccuracy,
           backtestDays: backtest.days,
           chartChange90d,
+          recentEarningsReaction: signal.flags.includes("Recent earnings reaction"),
+          postEarningsReturn3d: signal.features.postEarningsReturn3d,
         });
       }
     }

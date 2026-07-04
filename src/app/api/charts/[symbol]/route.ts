@@ -11,7 +11,7 @@ export async function GET(
   initDb();
   const { symbol: rawSymbol } = await params;
   const symbol = rawSymbol.toUpperCase();
-  const days = Number(request.nextUrl.searchParams.get("days") ?? 90);
+  const days = Math.min(Math.max(Number(request.nextUrl.searchParams.get("days") ?? 730), 30), 3650);
 
   const entry = getSymbolEntry(symbol);
   if (!entry) {

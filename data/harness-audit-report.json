@@ -1,0 +1,199 @@
+{
+  "generatedAt": "2026-07-04T06:15:11.927Z",
+  "featureKeys": [
+    "momentum5d",
+    "momentum20d",
+    "return1d",
+    "volatility20d",
+    "volumeZScore",
+    "avgSentiment7d",
+    "sentimentDelta",
+    "newsCount7d",
+    "newsVolumeZ",
+    "sentimentMlCoverage",
+    "trendStrength",
+    "momentumTrendAlign",
+    "spikeShare"
+  ],
+  "sampleCount": 22566,
+  "uniqueDates": 434,
+  "dateRange": {
+    "start": "2024-09-27",
+    "end": "2026-06-26"
+  },
+  "checks": {
+    "foldConstruction": {
+      "pass": true,
+      "issues": [],
+      "foldLog": [
+        "fold 1: train dates [2024-09-27 .. 2025-03-12] (n=115 days), test dates [2025-03-21 .. 2025-06-19] (n=60 days), gap days between train end and test start = 5",
+        "fold 2: train dates [2024-09-27 .. 2025-06-12] (n=175 days), test dates [2025-06-20 .. 2025-09-15] (n=60 days), gap days between train end and test start = 5",
+        "fold 3: train dates [2024-09-27 .. 2025-09-08] (n=235 days), test dates [2025-09-16 .. 2025-12-11] (n=60 days), gap days between train end and test start = 5",
+        "fold 4: train dates [2024-09-27 .. 2025-12-04] (n=295 days), test dates [2025-12-12 .. 2026-03-10] (n=60 days), gap days between train end and test start = 5",
+        "fold 5: train dates [2024-09-27 .. 2026-03-02] (n=355 days), test dates [2026-03-11 .. 2026-06-08] (n=60 days), gap days between train end and test start = 5",
+        "fold 6: train dates [2024-09-27 .. 2026-06-01] (n=415 days), test dates [2026-06-09 .. 2026-06-26] (n=14 days), gap days between train end and test start = 5"
+      ]
+    },
+    "standardizationPerFold": {
+      "pass": true,
+      "issues": []
+    },
+    "labelConsistency": {
+      "pass": true,
+      "issues": [],
+      "details": {
+        "forwardDays": 5,
+        "targetType": "rank",
+        "minSymbolsPerDateForIc": 5,
+        "rawSampleCount": 22566,
+        "preparedRowCount": 22566,
+        "wfOosWindow": {
+          "start": "2025-03-21",
+          "end": "2026-06-26"
+        },
+        "wfOosPreparedRows": 16326,
+        "wfFoldTestRowsSum": 16326,
+        "holdoutOosTestRows": 16326,
+        "labelConstruction": "Both paths use prepareCrossSectionalSamples: 5d forward return → per-date rank in [-1,1]; CS z-score per date across symbols"
+      }
+    }
+  },
+  "walkForward": {
+    "aggregate": {
+      "meanIC": -0.013262497274246436,
+      "icIR": -0.0785899163125691,
+      "tStat": -1.3926168651316904,
+      "nDays": 314
+    },
+    "signFlips": 2,
+    "perFoldTable": [
+      {
+        "fold": 1,
+        "train_start": "2024-09-27",
+        "train_end": "2025-03-12",
+        "test_start": "2025-03-21",
+        "test_end": "2025-06-19",
+        "n_train_days": 115,
+        "n_test_days": 60,
+        "gap_days": 5,
+        "n_test_rows": 3120,
+        "std_fit_train_rows": 5980,
+        "std_fit_test_rows": 3120,
+        "mean_daily_IC": -0.04316713623039927,
+        "daily_IC_std": 0.17284448898861945,
+        "best_lambda": 1.5
+      },
+      {
+        "fold": 2,
+        "train_start": "2024-09-27",
+        "train_end": "2025-06-12",
+        "test_start": "2025-06-20",
+        "test_end": "2025-09-15",
+        "n_train_days": 175,
+        "n_test_days": 60,
+        "gap_days": 5,
+        "n_test_rows": 3120,
+        "std_fit_train_rows": 9100,
+        "std_fit_test_rows": 3120,
+        "mean_daily_IC": -0.008894675431856347,
+        "daily_IC_std": 0.17188805698215628,
+        "best_lambda": 12
+      },
+      {
+        "fold": 3,
+        "train_start": "2024-09-27",
+        "train_end": "2025-09-08",
+        "test_start": "2025-09-16",
+        "test_end": "2025-12-11",
+        "n_train_days": 235,
+        "n_test_days": 60,
+        "gap_days": 5,
+        "n_test_rows": 3120,
+        "std_fit_train_rows": 12220,
+        "std_fit_test_rows": 3120,
+        "mean_daily_IC": 0.013173397080167338,
+        "daily_IC_std": 0.12146669511570272,
+        "best_lambda": 8
+      },
+      {
+        "fold": 4,
+        "train_start": "2024-09-27",
+        "train_end": "2025-12-04",
+        "test_start": "2025-12-12",
+        "test_end": "2026-03-10",
+        "n_train_days": 295,
+        "n_test_days": 60,
+        "gap_days": 5,
+        "n_test_rows": 3120,
+        "std_fit_train_rows": 15340,
+        "std_fit_test_rows": 3120,
+        "mean_daily_IC": 0.024572412419249273,
+        "daily_IC_std": 0.2012894638204545,
+        "best_lambda": 8
+      },
+      {
+        "fold": 5,
+        "train_start": "2024-09-27",
+        "train_end": "2026-03-02",
+        "test_start": "2026-03-11",
+        "test_end": "2026-06-08",
+        "n_train_days": 355,
+        "n_test_days": 60,
+        "gap_days": 5,
+        "n_test_rows": 3119,
+        "std_fit_train_rows": 18460,
+        "std_fit_test_rows": 3119,
+        "mean_daily_IC": -0.033136657275392015,
+        "daily_IC_std": 0.1653043882326551,
+        "best_lambda": 12
+      },
+      {
+        "fold": 6,
+        "train_start": "2024-09-27",
+        "train_end": "2026-06-01",
+        "test_start": "2026-06-09",
+        "test_end": "2026-06-26",
+        "n_train_days": 415,
+        "n_test_days": 14,
+        "gap_days": 5,
+        "n_test_rows": 727,
+        "std_fit_train_rows": 21579,
+        "std_fit_test_rows": 727,
+        "mean_daily_IC": -0.09409032698710836,
+        "daily_IC_std": 0.1350009170510338,
+        "best_lambda": 0.1
+      }
+    ],
+    "oosWindow": {
+      "start": "2025-03-21",
+      "end": "2026-06-26",
+      "testRows": 16326
+    }
+  },
+  "holdoutComparison": {
+    "fullTimeline25pct": {
+      "splitDate": "2026-01-19",
+      "trainEnd": "2026-01-09",
+      "gapDays": 5,
+      "trainRows": 16640,
+      "testRows": 5666,
+      "meanIC": -0.001070855953198709,
+      "tStat": -0.053770467439080774,
+      "nDays": 109
+    },
+    "restrictedToWfOosWindow": {
+      "splitDate": "2025-03-21",
+      "trainEnd": "2025-03-12",
+      "gapDays": 5,
+      "trainRows": 5980,
+      "testRows": 16326,
+      "meanIC": -0.010739751846307212,
+      "tStat": -0.97962180591245,
+      "nDays": 314
+    },
+    "wfPooledMeanIC": -0.013262497274246436,
+    "interpretation": "Old 25% holdout IC (-0.0011) exceeds walk-forward pooled (-0.0133). Holdout test window (2026-01-19+) overlaps fold 4 (2025-12-12–2026-03-10, IC=0.0246) — favorable-slice artifact, not harness bug."
+  },
+  "verdict": "Harness clean. Core features show IC ≈ 0 with frequent fold sign flips — signal too unstable to act on.",
+  "nextStep": "Proceed to A2 (earnings) testing standalone IC with mandatory per-fold table; do not expect incremental gains over a non-existent baseline."
+}

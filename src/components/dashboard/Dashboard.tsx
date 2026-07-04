@@ -26,6 +26,16 @@ import {
 } from "@/components/dashboard/RankerStatus";
 import { ManagerDeskChat } from "@/components/dashboard/ManagerDeskChat";
 import { PortfolioPanel } from "@/components/dashboard/PortfolioPanel";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+
+const CHART_PERIODS = [
+  { label: "3M", days: 90 },
+  { label: "6M", days: 180 },
+  { label: "1Y", days: 365 },
+  { label: "2Y", days: 730 },
+  { label: "5Y", days: 1825 },
+] as const;
 
 interface ChartData {
   symbol: string;
@@ -64,6 +74,7 @@ export function Dashboard() {
   const [sentimentModel, setSentimentModel] = useState<string | null>(null);
   const [rankerStatus, setRankerStatus] = useState<RankerStatusInfo | null>(null);
   const [portfolioPrompt, setPortfolioPrompt] = useState<string | null>(null);
+  const [chartDays, setChartDays] = useState(730);
 
   const [signalDetail, setSignalDetail] = useState<{
     score: number;
@@ -140,11 +151,11 @@ export function Dashboard() {
     });
   }, []);
 
-  const loadChart = useCallback(async (symbol: string) => {
+  const loadChart = useCallback(async (symbol: string, days: number) => {
     setChartLoading(true);
     try {
       const [chartRes, newsRes] = await Promise.all([
-        fetch(`/api/charts/${symbol}?days=90`),
+        fetch(`/api/charts/${symbol}?days=${days}`),
         fetch(`/api/news?symbol=${symbol}&days=30`),
       ]);
       const chart = await chartRes.json();
@@ -166,10 +177,10 @@ export function Dashboard() {
 
   useEffect(() => {
     if (selected) {
-      loadChart(selected);
+      loadChart(selected, chartDays);
       loadSignalDetail(selected);
     }
-  }, [selected, loadChart, loadSignalDetail]);
+  }, [selected, chartDays, loadChart, loadSignalDetail]);
 
   const handleAddWatchlist = async (symbol: string) => {
     await fetch("/api/watchlist", {
@@ -213,7 +224,7 @@ export function Dashboard() {
         setIngestStatus(data.error ?? "Ingest failed");
       }
       await loadWatchlist();
-      await loadChart(selected);
+      await loadChart(selected, chartDays);
       await loadSignalDetail(selected);
     } finally {
       setIngesting(false);
@@ -345,6 +356,18 @@ export function Dashboard() {
                     {signalDetail.score.toFixed(2)}
                   </p>
                 )}
+                <p className="mt-1 rounded-md bg-amber-500/[0.07] px-2 py-1 text-[10px] leading-relaxed text-amber-300/70 ring-1 ring-amber-500/15">
+                  Ranks by cross-sectional momentum, news sentiment &amp; long-term trend — a
+                  short-horizon snapshot, not fundamentals or a predictive buy signal.
+                  {signalDetail.backtest &&
+                  signalDetail.backtest.days > 0 &&
+                  Math.abs(signalDetail.backtest.ic) < 0.02
+                    ? " Backtest IC ≈ 0 on this symbol."
+                    : ""}
+                  {" "}Scores blend ML ranker (walk-forward IC-weighted) with heuristic flags for
+                  explainability. Backtest uses today&apos;s watchlist over history — survivorship
+                  bias may overstate results. Personal use only.
+                </p>
               </CardHeader>
               <CardContent className="space-y-4 pt-0">
                 {signalDetail.recommendation && (
@@ -365,11 +388,39 @@ export function Dashboard() {
           <div className="lg:col-span-3">
             <Card className="overflow-hidden border-white/[0.08] bg-white/[0.02]">
               <CardHeader className="border-b border-white/[0.06] pb-3">
-                <div className="flex items-baseline gap-2">
-                  <CardTitle className="font-mono text-lg">{selected}</CardTitle>
-                  {chartData?.companyName && (
-                    <span className="truncate text-xs text-white/40">{chartData.companyName}</span>
-                  )}
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-baseline gap-2">
+                    <CardTitle className="font-mono text-lg">{selected}</CardTitle>
+                    {chartData?.companyName && (
+                      <span className="truncate text-xs text-white/40">{chartData.companyName}</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="flex rounded-lg bg-white/[0.04] p-0.5">
+                      {CHART_PERIODS.map((p) => (
+                        <Button
+                          key={p.label}
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className={cn(
+                            "h-7 px-2.5 text-[11px] font-medium",
+                            chartDays === p.days
+                              ? "bg-indigo-600/80 text-white"
+                              : "text-white/45 hover:text-white/70"
+                          )}
+                          onClick={() => setChartDays(p.days)}
+                        >
+                          {p.label}
+                        </Button>
+                      ))}
+                    </div>
+                    {chartData?.ohlcv && chartData.ohlcv.length > 0 && (
+                      <span className="text-[10px] text-white/30">
+                        {chartData.ohlcv[0].date} → {chartData.ohlcv[chartData.ohlcv.length - 1].date}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </CardHeader>
               <CardContent className="pt-4">

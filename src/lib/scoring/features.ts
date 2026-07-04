@@ -1,4 +1,14 @@
 import type { OhlcvBar } from "@/lib/prices/yfinance";
+import {
+  benchmarkSnapshotAt,
+  relativeDelta,
+  type BenchmarkSnapshot,
+} from "./benchmark-features";
+import {
+  computeEarningsFeatures,
+  earningsFeatureValues,
+} from "@/lib/earnings/features";
+import type { EarningsEventRecord } from "@/lib/earnings/types";
 
 export interface SentimentDay {
   date: string;
@@ -18,6 +28,48 @@ export interface RawFeatures {
   newsVolumeZ: number;
   sentimentMlCoverage: number;
   latestClose: number | null;
+  /** % of latest close above (+) / below (-) its long-term moving average. 0 when history is too short. */
+  trendStrength: number;
+  /** Stock minus market (Nifty 50) — positive = outperforming the index. */
+  momentum20dVsMarket: number;
+  trendStrengthVsMarket: number;
+  /** Stock minus sector index — positive = outperforming sector peers. */
+  momentum20dVsSector: number;
+  trendStrengthVsSector: number;
+  volatility20dVsSector: number;
+  /** Trading days since last earnings (0 if none in lookback). */
+  daysSinceEarnings: number;
+  /** 3d post-earnings return from last event (0 if unavailable). */
+  postEarningsReturn3d: number;
+  /** 1 if earnings event found in lookback window. */
+  earningsDataAvailable: number;
+  /** 1 if daysSinceEarnings <= 5. */
+  hasRecentEarnings: number;
+}
+
+/** Minimum bars before we trust a long-term trend read. */
+const MIN_TREND_BARS = 60;
+/** Cap the long-term average window (trading days). */
+const MAX_TREND_PERIOD = 200;
+
+function movingAverage(bars: OhlcvBar[], period: number): number | null {
+  if (bars.length < period || period <= 0) return null;
+  const slice = bars.slice(-period);
+  return slice.reduce((s, b) => s + b.close, 0) / period;
+}
+
+/**
+ * Long-term trend read: latest close vs its long-term SMA (up to 200 trading days).
+ * Positive = trading above the long-term average (uptrend), negative = below (downtrend).
+ * Returns 0 when there isn't enough history, so short-lived listings aren't penalized.
+ */
+function trendStrength(bars: OhlcvBar[]): number {
+  if (bars.length < MIN_TREND_BARS) return 0;
+  const period = Math.min(bars.length - 1, MAX_TREND_PERIOD);
+  const sma = movingAverage(bars, period);
+  if (sma == null || sma <= 0) return 0;
+  const close = bars[bars.length - 1].close;
+  return ((close - sma) / sma) * 100;
 }
 
 function dailyLogReturns(bars: OhlcvBar[]): number[] {
@@ -116,16 +168,26 @@ function return1d(bars: OhlcvBar[]): number {
 export function extractFeatures(
   ohlcv: OhlcvBar[],
   sentimentTimeline: SentimentDay[] = [],
-  sentimentMlCoverage = 0
+  sentimentMlCoverage = 0,
+  benchmarks: { market?: BenchmarkSnapshot | null; sector?: BenchmarkSnapshot | null } = {},
+  earningsEvents: EarningsEventRecord[] = [],
+  asOfDate?: string
 ): RawFeatures {
   const recent7 = sentimentWindow(sentimentTimeline, 0, 7);
   const prior7 = sentimentWindow(sentimentTimeline, 7, 7);
 
+  const mom20 = momentum(ohlcv, 20);
+  const trend = trendStrength(ohlcv);
+  const vol20 = volatility(ohlcv, 20);
+  const featureDate = asOfDate ?? (ohlcv.length > 0 ? ohlcv[ohlcv.length - 1].date : "");
+  const earnings = computeEarningsFeatures(ohlcv, earningsEvents, featureDate);
+  const ev = earningsFeatureValues(earnings);
+
   return {
     momentum5d: momentum(ohlcv, 5),
-    momentum20d: momentum(ohlcv, 20),
+    momentum20d: mom20,
     return1d: return1d(ohlcv),
-    volatility20d: volatility(ohlcv, 20),
+    volatility20d: vol20,
     volumeZScore: volumeZScore(ohlcv, 20),
     avgSentiment7d: recent7.avg,
     sentimentDelta: recent7.avg - prior7.avg,
@@ -133,6 +195,16 @@ export function extractFeatures(
     newsVolumeZ: newsVolumeZ(sentimentTimeline),
     sentimentMlCoverage,
     latestClose: ohlcv.length > 0 ? ohlcv[ohlcv.length - 1].close : null,
+    trendStrength: trend,
+    momentum20dVsMarket: relativeDelta(mom20, benchmarks.market?.momentum20d),
+    trendStrengthVsMarket: relativeDelta(trend, benchmarks.market?.trendStrength),
+    momentum20dVsSector: relativeDelta(mom20, benchmarks.sector?.momentum20d),
+    trendStrengthVsSector: relativeDelta(trend, benchmarks.sector?.trendStrength),
+    volatility20dVsSector: relativeDelta(vol20, benchmarks.sector?.volatility20d),
+    daysSinceEarnings: ev.daysSinceEarnings,
+    postEarningsReturn3d: ev.postEarningsReturn3d,
+    earningsDataAvailable: ev.earningsDataAvailable,
+    hasRecentEarnings: ev.hasRecentEarnings,
   };
 }
 
@@ -141,11 +213,23 @@ export function extractFeaturesAt(
   ohlcv: OhlcvBar[],
   sentimentTimeline: SentimentDay[],
   asOfDate: string,
-  sentimentMlCoverage = 0
+  sentimentMlCoverage = 0,
+  benchmarkSeries: {
+    market?: OhlcvBar[];
+    sector?: OhlcvBar[] | null;
+  } = {},
+  earningsEvents: EarningsEventRecord[] = []
 ): RawFeatures | null {
   const bars = ohlcv.filter((b) => b.date <= asOfDate);
   if (bars.length < 22) return null;
 
   const sentiment = sentimentTimeline.filter((d) => d.date <= asOfDate);
-  return extractFeatures(bars, sentiment, sentimentMlCoverage);
+  const market = benchmarkSeries.market
+    ? benchmarkSnapshotAt(benchmarkSeries.market, asOfDate)
+    : null;
+  const sector = benchmarkSeries.sector
+    ? benchmarkSnapshotAt(benchmarkSeries.sector, asOfDate)
+    : null;
+
+  return extractFeatures(bars, sentiment, sentimentMlCoverage, { market, sector }, earningsEvents, asOfDate);
 }

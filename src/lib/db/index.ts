@@ -69,6 +69,15 @@ export function initDb() {
     CREATE INDEX IF NOT EXISTS idx_articles_published ON articles(published_at);
     CREATE INDEX IF NOT EXISTS idx_daily_sentiment_symbol ON daily_sentiment(symbol, date);
     CREATE INDEX IF NOT EXISTS idx_portfolio_symbol ON portfolio_holdings(symbol);
+    CREATE TABLE IF NOT EXISTS earnings_events (
+      symbol TEXT NOT NULL,
+      event_date TEXT NOT NULL,
+      actual_eps REAL,
+      estimate_eps REAL,
+      source TEXT NOT NULL,
+      PRIMARY KEY (symbol, event_date)
+    );
+    CREATE INDEX IF NOT EXISTS idx_earnings_symbol_date ON earnings_events(symbol, event_date);
   `);
   try {
     sqlite.exec(`ALTER TABLE articles ADD COLUMN sentiment_source TEXT NOT NULL DEFAULT 'rules'`);

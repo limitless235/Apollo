@@ -1,6 +1,14 @@
 import type { RawFeatures } from "./features";
 import type { RankerModel } from "./ranker-model";
-import { blendScores, predictRankerScoresBatch, getEffectiveRankerBlend } from "./ranker-model";
+import { predictRankerScoresBatch, getMlWeight } from "./ranker-model";
+import { blendRankScores, getScoringMode } from "./score-blend";
+import {
+  applyOverlay,
+  isEarningsOverlayEnabled,
+  loadEarningsOverlay,
+  nearEarningsRowFilter,
+  shrinkageFactor,
+} from "./earnings-overlay";
 
 export interface FeatureContribution {
   key: string;
@@ -29,13 +37,14 @@ export interface SymbolSignal {
 export type SignalLabel = "Strong Bullish" | "Bullish" | "Neutral" | "Bearish" | "Strong Bearish";
 
 const WEIGHTS = {
-  momentum20d: 0.22,
-  momentum5d: 0.13,
-  avgSentiment7d: 0.22,
+  momentum20d: 0.18,
+  momentum5d: 0.1,
+  avgSentiment7d: 0.2,
   sentimentDelta: 0.1,
-  newsVolumeZ: 0.13,
+  newsVolumeZ: 0.12,
   volumeZScore: 0.1,
   volatility20d: -0.1,
+  trendStrength: 0.17,
 } as const;
 
 function tanhScale(value: number, scale: number): number {
@@ -59,9 +68,28 @@ function normalizeFeature(key: keyof typeof WEIGHTS, raw: number): number {
       return tanhScale(raw, 2.5);
     case "volatility20d":
       return tanhScale(raw, 35);
+    case "trendStrength":
+      return tanhScale(raw, 10);
     default:
       return 0;
   }
+}
+
+/**
+ * How much of the recent 5d move came from a single day. Returns a multiplier in
+ * [SPIKE_FLOOR, 1] applied to momentum contributions so one-day spikes need
+ * multi-day confirmation before they can top the ranking.
+ */
+const SPIKE_FLOOR = 0.55;
+function spikeDampener(return1d: number, momentum5d: number): number {
+  const mag = Math.abs(momentum5d);
+  if (mag < 0.5) return 1;
+  // Only dampen when today's move is in the same direction as the 5d trend (i.e. inflating it).
+  if (Math.sign(return1d) !== Math.sign(momentum5d)) return 1;
+  const share = Math.min(1, Math.abs(return1d) / mag);
+  if (share <= 0.5) return 1;
+  // share 0.5 -> 1.0, share 1.0 -> SPIKE_FLOOR
+  return Math.max(SPIKE_FLOOR, 1 - (share - 0.5) * (1 - SPIKE_FLOOR) * 2);
 }
 
 const FEATURE_LABELS: Record<keyof typeof WEIGHTS, string> = {
@@ -72,6 +100,7 @@ const FEATURE_LABELS: Record<keyof typeof WEIGHTS, string> = {
   newsVolumeZ: "News activity",
   volumeZScore: "Volume surge",
   volatility20d: "Volatility",
+  trendStrength: "Long-term trend",
 };
 
 export function scoreFeatures(features: RawFeatures): {
@@ -82,6 +111,7 @@ export function scoreFeatures(features: RawFeatures): {
   const breakdown: FeatureContribution[] = [];
   let score = 0;
   const sentimentTrust = 0.55 + 0.45 * features.sentimentMlCoverage;
+  const spikeMult = spikeDampener(features.return1d, features.momentum5d);
 
   for (const key of Object.keys(WEIGHTS) as (keyof typeof WEIGHTS)[]) {
     let raw = features[key];
@@ -90,7 +120,9 @@ export function scoreFeatures(features: RawFeatures): {
     }
     const normalized = normalizeFeature(key, raw);
     const weight = WEIGHTS[key];
-    const contribution = normalized * weight;
+    // Require multi-day confirmation: a single-day spike counts for less.
+    const dampen = key === "momentum5d" || key === "momentum20d" ? spikeMult : 1;
+    const contribution = normalized * weight * dampen;
     score += contribution;
 
     breakdown.push({
@@ -104,6 +136,16 @@ export function scoreFeatures(features: RawFeatures): {
   }
 
   const flags: string[] = [];
+
+  if (spikeMult < 0.85) {
+    flags.push("Single-day spike (unconfirmed)");
+  }
+
+  if (features.trendStrength <= -3) {
+    flags.push("Below long-term trend");
+  } else if (features.trendStrength >= 3) {
+    flags.push("Above long-term trend");
+  }
 
   if (features.sentimentMlCoverage >= 0.75) {
     flags.push("FinBERT-scored news");
@@ -137,6 +179,10 @@ export function scoreFeatures(features: RawFeatures): {
     );
   }
 
+  if (nearEarningsRowFilter(features)) {
+    flags.push("Recent earnings reaction");
+  }
+
   return { score, breakdown, flags };
 }
 
@@ -161,24 +207,50 @@ export function rankSignals(
     items.map((item) => item.features),
     rankerModel
   );
-  const blend = getEffectiveRankerBlend(rankerModel);
+  const mlWeight = getMlWeight(rankerModel);
+  const scoringMode = getScoringMode();
+
+  const featureScores = items.map((item) => scoreFeatures(item.features));
+  const heuristicScores = featureScores.map((f) => f.score);
+  const blendedScores = blendRankScores(
+    heuristicScores,
+    learnedScores,
+    mlWeight,
+    scoringMode
+  );
+
+  const overlay =
+    isEarningsOverlayEnabled() ? loadEarningsOverlay() : null;
+  const overlayShrinkage =
+    overlay != null
+      ? shrinkageFactor(
+          overlay.trainedOnRows,
+          overlay.shrinkageMinRows,
+          overlay.shrinkageFullRows
+        )
+      : 0;
 
   const scored = items.map((item, idx) => {
-    const { score: heuristicScore, breakdown, flags } = scoreFeatures(item.features);
+    const { score: heuristicScore, breakdown, flags } = featureScores[idx];
     const learnedScore = learnedScores[idx];
-    const blended = blendScores(heuristicScore, learnedScore, blend);
+    let finalScore = blendedScores[idx];
+    const rankerActive = learnedScore != null && scoringMode !== "heuristic_only";
     const finalFlags = [...flags];
-    if (blended.rankerActive) finalFlags.push("ML ranker blended");
+    if (rankerActive) finalFlags.push("ML ranker blended");
+
+    if (overlay && overlayShrinkage > 0 && nearEarningsRowFilter(item.features)) {
+      finalScore = applyOverlay(finalScore, item.features, overlay, overlayShrinkage);
+    }
 
     return {
       symbol: item.symbol,
       companyName: item.companyName,
-      score: blended.score,
+      score: finalScore,
       heuristicScore,
-      learnedScore: blended.learnedScore,
-      rankerActive: blended.rankerActive,
+      learnedScore: rankerActive ? learnedScore : null,
+      rankerActive,
       rank: 0,
-      label: signalLabel(blended.score),
+      label: signalLabel(finalScore),
       flags: finalFlags,
       features: item.features,
       breakdown,

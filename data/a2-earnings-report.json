@@ -1,0 +1,1566 @@
+{
+  "generatedAt": "2026-07-04T06:48:08.793Z",
+  "sampleStats": {
+    "totalSamples": 22566,
+    "withEarningsLookback": 14880,
+    "nearEarningsRows": 1912
+  },
+  "acceptanceBar": {
+    "rules": [
+      "|t-stat| > 2 on near-earnings subset (standalone postEarningsReturn3d)",
+      "≤ 1 sign flip across folds on subset",
+      "Overlay: base+overlay beats base_only on near-earnings subset",
+      "Overlay: full-dataset IC not worse than base_only",
+      "Adjustment cap ±0.15 on rank score scale"
+    ]
+  },
+  "nearEarningsPostReturn3d": {
+    "folds": [
+      {
+        "fold": 1,
+        "testStart": "2025-03-21",
+        "testEnd": "2025-06-19",
+        "nTestDays": 60,
+        "nTestRows": 198,
+        "nQualifyingDays": 51,
+        "lowDayCountWarning": false,
+        "meanIC": 0.11325499896928468,
+        "dailyIcStd": 0.43633634251612596
+      },
+      {
+        "fold": 2,
+        "testStart": "2025-06-20",
+        "testEnd": "2025-09-15",
+        "nTestDays": 60,
+        "nTestRows": 181,
+        "nQualifyingDays": 39,
+        "lowDayCountWarning": false,
+        "meanIC": 0.05591723091723092,
+        "dailyIcStd": 0.3588106452894188
+      },
+      {
+        "fold": 3,
+        "testStart": "2025-09-16",
+        "testEnd": "2025-12-11",
+        "nTestDays": 60,
+        "nTestRows": 192,
+        "nQualifyingDays": 44,
+        "lowDayCountWarning": false,
+        "meanIC": 0.13813003989474576,
+        "dailyIcStd": 0.36021744658194443
+      },
+      {
+        "fold": 4,
+        "testStart": "2025-12-12",
+        "testEnd": "2026-03-10",
+        "nTestDays": 60,
+        "nTestRows": 182,
+        "nQualifyingDays": 45,
+        "lowDayCountWarning": false,
+        "meanIC": 0.36010864135864135,
+        "dailyIcStd": 0.2931895583650924
+      },
+      {
+        "fold": 5,
+        "testStart": "2026-03-11",
+        "testEnd": "2026-06-08",
+        "nTestDays": 60,
+        "nTestRows": 185,
+        "nQualifyingDays": 55,
+        "lowDayCountWarning": false,
+        "meanIC": 0.01339285714285715,
+        "dailyIcStd": 0.4695802108820207
+      },
+      {
+        "fold": 6,
+        "testStart": "2026-06-09",
+        "testEnd": "2026-06-26",
+        "nTestDays": 14,
+        "nTestRows": 10,
+        "nQualifyingDays": 9,
+        "lowDayCountWarning": true,
+        "meanIC": 0,
+        "dailyIcStd": 0
+      }
+    ],
+    "aggregate": {
+      "meanIC": 0.13293999661988715,
+      "icIR": 0.33259815402328385,
+      "tStat": 3.0843883927180538,
+      "nDays": 86
+    },
+    "acceptance": {
+      "pass": true,
+      "reasons": [],
+      "tStatPass": true,
+      "signFlipPass": true,
+      "signFlips": 0,
+      "maxAllowedSignFlips": 1,
+      "significance": {
+        "meanIC": 0.13293999661988715,
+        "icIR": 0.33259815402328385,
+        "tStat": 3.0843883927180538,
+        "nDays": 86
+      }
+    },
+    "subsetPasses": true,
+    "lowDayWarnings": [
+      {
+        "fold": 6,
+        "testStart": "2026-06-09",
+        "testEnd": "2026-06-26",
+        "nTestDays": 14,
+        "nTestRows": 10,
+        "nQualifyingDays": 9,
+        "lowDayCountWarning": true,
+        "meanIC": 0,
+        "dailyIcStd": 0
+      }
+    ]
+  },
+  "nearEarningsDaysSince": {
+    "folds": [
+      {
+        "fold": 1,
+        "testStart": "2025-03-21",
+        "testEnd": "2025-06-19",
+        "nTestDays": 60,
+        "nTestRows": 387,
+        "nQualifyingDays": 58,
+        "lowDayCountWarning": false,
+        "meanIC": -0.08902292771461127,
+        "dailyIcStd": 0.356780714056288
+      },
+      {
+        "fold": 2,
+        "testStart": "2025-06-20",
+        "testEnd": "2025-09-15",
+        "nTestDays": 60,
+        "nTestRows": 367,
+        "nQualifyingDays": 50,
+        "lowDayCountWarning": false,
+        "meanIC": 0.009570172054355654,
+        "dailyIcStd": 0.34529361900496724
+      },
+      {
+        "fold": 3,
+        "testStart": "2025-09-16",
+        "testEnd": "2025-12-11",
+        "nTestDays": 60,
+        "nTestRows": 379,
+        "nQualifyingDays": 51,
+        "lowDayCountWarning": false,
+        "meanIC": 0.082036900391154,
+        "dailyIcStd": 0.30873925777043604
+      },
+      {
+        "fold": 4,
+        "testStart": "2025-12-12",
+        "testEnd": "2026-03-10",
+        "nTestDays": 60,
+        "nTestRows": 365,
+        "nQualifyingDays": 56,
+        "lowDayCountWarning": false,
+        "meanIC": -0.015771354012500613,
+        "dailyIcStd": 0.3265908279305326
+      },
+      {
+        "fold": 5,
+        "testStart": "2026-03-11",
+        "testEnd": "2026-06-08",
+        "nTestDays": 60,
+        "nTestRows": 367,
+        "nQualifyingDays": 60,
+        "lowDayCountWarning": false,
+        "meanIC": 0.09338261468078914,
+        "dailyIcStd": 0.36484264266718475
+      },
+      {
+        "fold": 6,
+        "testStart": "2026-06-09",
+        "testEnd": "2026-06-26",
+        "nTestDays": 14,
+        "nTestRows": 24,
+        "nQualifyingDays": 14,
+        "lowDayCountWarning": true,
+        "meanIC": 0,
+        "dailyIcStd": 0
+      }
+    ],
+    "aggregate": {
+      "meanIC": 0.015167920695986391,
+      "icIR": 0.04402270395116514,
+      "tStat": 0.5019360519153321,
+      "nDays": 130
+    },
+    "acceptance": {
+      "pass": false,
+      "reasons": [
+        "|t-stat|=0.50 ≤ 2",
+        "sign flips=3 > 1"
+      ],
+      "tStatPass": false,
+      "signFlipPass": false,
+      "signFlips": 3,
+      "maxAllowedSignFlips": 1,
+      "significance": {
+        "meanIC": 0.015167920695986391,
+        "icIR": 0.04402270395116514,
+        "tStat": 0.5019360519153321,
+        "nDays": 130
+      }
+    }
+  },
+  "restSanity": {
+    "folds": [
+      {
+        "fold": 1,
+        "testStart": "2025-03-21",
+        "testEnd": "2025-06-19",
+        "nTestDays": 60,
+        "nTestRows": 2733,
+        "nQualifyingDays": 60,
+        "lowDayCountWarning": false,
+        "meanIC": -0.07997622954746064,
+        "dailyIcStd": 0.21692297196579136
+      },
+      {
+        "fold": 2,
+        "testStart": "2025-06-20",
+        "testEnd": "2025-09-15",
+        "nTestDays": 60,
+        "nTestRows": 2753,
+        "nQualifyingDays": 60,
+        "lowDayCountWarning": false,
+        "meanIC": -0.06303685258775998,
+        "dailyIcStd": 0.18950816252160896
+      },
+      {
+        "fold": 3,
+        "testStart": "2025-09-16",
+        "testEnd": "2025-12-11",
+        "nTestDays": 60,
+        "nTestRows": 2741,
+        "nQualifyingDays": 60,
+        "lowDayCountWarning": false,
+        "meanIC": 0.08708052654253613,
+        "dailyIcStd": 0.16727478314078584
+      },
+      {
+        "fold": 4,
+        "testStart": "2025-12-12",
+        "testEnd": "2026-03-10",
+        "nTestDays": 60,
+        "nTestRows": 2755,
+        "nQualifyingDays": 60,
+        "lowDayCountWarning": false,
+        "meanIC": 0.029860048202872167,
+        "dailyIcStd": 0.2699364023950929
+      },
+      {
+        "fold": 5,
+        "testStart": "2026-03-11",
+        "testEnd": "2026-06-08",
+        "nTestDays": 60,
+        "nTestRows": 2752,
+        "nQualifyingDays": 60,
+        "lowDayCountWarning": false,
+        "meanIC": -0.07469837190656996,
+        "dailyIcStd": 0.2196319926821244
+      },
+      {
+        "fold": 6,
+        "testStart": "2026-06-09",
+        "testEnd": "2026-06-26",
+        "nTestDays": 14,
+        "nTestRows": 703,
+        "nQualifyingDays": 14,
+        "lowDayCountWarning": true,
+        "meanIC": 0.15783986121921295,
+        "dailyIcStd": 0.25546221539142216
+      }
+    ],
+    "aggregate": {
+      "meanIC": -0.012218135989534881,
+      "icIR": -0.05352923252171465,
+      "tStat": -0.9485404169513447,
+      "nDays": 314
+    },
+    "acceptance": {
+      "pass": false,
+      "reasons": [
+        "|t-stat|=0.95 ≤ 2",
+        "sign flips=3 > 1"
+      ],
+      "tStatPass": false,
+      "signFlipPass": false,
+      "signFlips": 3,
+      "maxAllowedSignFlips": 1,
+      "significance": {
+        "meanIC": -0.012218135989534881,
+        "icIR": -0.05352923252171465,
+        "tStat": -0.9485404169513447,
+        "nDays": 314
+      }
+    },
+    "note": "Should resemble core baseline (~-0.013); validates subset split is not leaking"
+  },
+  "outlierAudit": {
+    "fold4RowCount": 182,
+    "fold4Top10ByAbsReturn": [
+      {
+        "date": "2026-01-01",
+        "symbol": "CUPID",
+        "postEarningsReturn3d": 7.8709450124636176,
+        "forwardReturn5d": -23.956944867270124,
+        "fold": 4
+      },
+      {
+        "date": "2026-01-29",
+        "symbol": "POWERGRID",
+        "postEarningsReturn3d": 2.4985269549532196,
+        "forwardReturn5d": 11.074858389065499,
+        "fold": 4
+      },
+      {
+        "date": "2026-01-05",
+        "symbol": "CUPID",
+        "postEarningsReturn3d": 7.8709450124636176,
+        "forwardReturn5d": 10.537111903097205,
+        "fold": 4
+      },
+      {
+        "date": "2026-02-02",
+        "symbol": "SHRIRAMFIN",
+        "postEarningsReturn3d": 1.9181904473273985,
+        "forwardReturn5d": 10.456291252337904,
+        "fold": 4
+      },
+      {
+        "date": "2026-01-28",
+        "symbol": "CUPID",
+        "postEarningsReturn3d": 5.284125561682774,
+        "forwardReturn5d": 7.615804678286191,
+        "fold": 4
+      },
+      {
+        "date": "2026-02-06",
+        "symbol": "WIPRO",
+        "postEarningsReturn3d": -1.5027427818969568,
+        "forwardReturn5d": -7.2078730906838455,
+        "fold": 4
+      },
+      {
+        "date": "2026-03-05",
+        "symbol": "ICICIBANK",
+        "postEarningsReturn3d": -1.5447130648341276,
+        "forwardReturn5d": -6.710369565719749,
+        "fold": 4
+      },
+      {
+        "date": "2026-02-05",
+        "symbol": "WIPRO",
+        "postEarningsReturn3d": -1.5027427818969568,
+        "forwardReturn5d": -6.131367066291035,
+        "fold": 4
+      },
+      {
+        "date": "2026-01-30",
+        "symbol": "BPCL",
+        "postEarningsReturn3d": 5.098100707922168,
+        "forwardReturn5d": 5.994514706039952,
+        "fold": 4
+      },
+      {
+        "date": "2026-02-02",
+        "symbol": "BPCL",
+        "postEarningsReturn3d": 5.098100707922168,
+        "forwardReturn5d": 5.890366748540657,
+        "fold": 4
+      }
+    ],
+    "fold4Qualitative": {
+      "dateRange": {
+        "start": "2025-12-12",
+        "end": "2026-03-09"
+      },
+      "uniqueSymbols": 51,
+      "symbolDateList": [
+        {
+          "date": "2025-12-12",
+          "symbol": "ONGC",
+          "forwardReturn5d": -2.155283081559899
+        },
+        {
+          "date": "2025-12-15",
+          "symbol": "TCS",
+          "forwardReturn5d": 2.9317055477484937
+        },
+        {
+          "date": "2025-12-16",
+          "symbol": "TCS",
+          "forwardReturn5d": 3.2729056549734197
+        },
+        {
+          "date": "2025-12-17",
+          "symbol": "TCS",
+          "forwardReturn5d": 3.1450043394937026
+        },
+        {
+          "date": "2025-12-22",
+          "symbol": "ADANIENT",
+          "forwardReturn5d": -2.1559553270653855
+        },
+        {
+          "date": "2025-12-23",
+          "symbol": "ADANIENT",
+          "forwardReturn5d": -0.40466459705886987
+        },
+        {
+          "date": "2025-12-24",
+          "symbol": "ADANIENT",
+          "forwardReturn5d": 1.6781414337305975
+        },
+        {
+          "date": "2025-12-24",
+          "symbol": "SHRIRAMFIN",
+          "forwardReturn5d": 4.72424765567522
+        },
+        {
+          "date": "2025-12-26",
+          "symbol": "SHRIRAMFIN",
+          "forwardReturn5d": 5.217388761878417
+        },
+        {
+          "date": "2025-12-29",
+          "symbol": "SHRIRAMFIN",
+          "forwardReturn5d": 5.007846738454997
+        },
+        {
+          "date": "2026-01-01",
+          "symbol": "CUPID",
+          "forwardReturn5d": -23.956944867270124
+        },
+        {
+          "date": "2026-01-02",
+          "symbol": "CUPID",
+          "forwardReturn5d": 1.083466704672843
+        },
+        {
+          "date": "2026-01-05",
+          "symbol": "CUPID",
+          "forwardReturn5d": 10.537111903097205
+        },
+        {
+          "date": "2026-01-15",
+          "symbol": "HCLTECH",
+          "forwardReturn5d": 2.0737174459656877
+        },
+        {
+          "date": "2026-01-15",
+          "symbol": "TCS",
+          "forwardReturn5d": -1.3187187989428348
+        },
+        {
+          "date": "2026-01-16",
+          "symbol": "HCLTECH",
+          "forwardReturn5d": 0.5300353356890459
+        },
+        {
+          "date": "2026-01-16",
+          "symbol": "TCS",
+          "forwardReturn5d": -1.3783625485671747
+        },
+        {
+          "date": "2026-01-19",
+          "symbol": "HCLTECH",
+          "forwardReturn5d": 0.19803717655243244
+        },
+        {
+          "date": "2026-01-19",
+          "symbol": "INFY",
+          "forwardReturn5d": 0.08922198688825977
+        },
+        {
+          "date": "2026-01-19",
+          "symbol": "TCS",
+          "forwardReturn5d": -0.1770166102978321
+        },
+        {
+          "date": "2026-01-20",
+          "symbol": "HDFCLIFE",
+          "forwardReturn5d": -0.4780767814120973
+        },
+        {
+          "date": "2026-01-20",
+          "symbol": "INFY",
+          "forwardReturn5d": 0.45813343023018377
+        },
+        {
+          "date": "2026-01-21",
+          "symbol": "HDFCBANK",
+          "forwardReturn5d": 1.6461155881942944
+        },
+        {
+          "date": "2026-01-21",
+          "symbol": "HDFCLIFE",
+          "forwardReturn5d": 0.3796507341324177
+        },
+        {
+          "date": "2026-01-21",
+          "symbol": "ICICIBANK",
+          "forwardReturn5d": 2.56486105158914
+        },
+        {
+          "date": "2026-01-21",
+          "symbol": "INFY",
+          "forwardReturn5d": 0.30826737854671843
+        },
+        {
+          "date": "2026-01-21",
+          "symbol": "RELIANCE",
+          "forwardReturn5d": -0.9682454664904994
+        },
+        {
+          "date": "2026-01-21",
+          "symbol": "TECHM",
+          "forwardReturn5d": 4.843782273511327
+        },
+        {
+          "date": "2026-01-21",
+          "symbol": "WIPRO",
+          "forwardReturn5d": 0.10436234473601085
+        },
+        {
+          "date": "2026-01-22",
+          "symbol": "HDFCBANK",
+          "forwardReturn5d": 1.1483604716216425
+        },
+        {
+          "date": "2026-01-22",
+          "symbol": "HDFCLIFE",
+          "forwardReturn5d": 0.8136842659930886
+        },
+        {
+          "date": "2026-01-22",
+          "symbol": "ICICIBANK",
+          "forwardReturn5d": 0.7060572277963582
+        },
+        {
+          "date": "2026-01-22",
+          "symbol": "RELIANCE",
+          "forwardReturn5d": -0.5062371184269162
+        },
+        {
+          "date": "2026-01-22",
+          "symbol": "TECHM",
+          "forwardReturn5d": 3.300933410334423
+        },
+        {
+          "date": "2026-01-22",
+          "symbol": "WIPRO",
+          "forwardReturn5d": -1.5582796987782441
+        },
+        {
+          "date": "2026-01-23",
+          "symbol": "HDFCBANK",
+          "forwardReturn5d": 1.309900700775022
+        },
+        {
+          "date": "2026-01-23",
+          "symbol": "ICICIBANK",
+          "forwardReturn5d": 0.6997189402436117
+        },
+        {
+          "date": "2026-01-23",
+          "symbol": "RELIANCE",
+          "forwardReturn5d": 0.31022645580144875
+        },
+        {
+          "date": "2026-01-23",
+          "symbol": "TECHM",
+          "forwardReturn5d": 1.3461892153736978
+        },
+        {
+          "date": "2026-01-27",
+          "symbol": "CUPID",
+          "forwardReturn5d": 4.716264463859473
+        },
+        {
+          "date": "2026-01-27",
+          "symbol": "DRREDDY",
+          "forwardReturn5d": -0.3548979061761983
+        },
+        {
+          "date": "2026-01-28",
+          "symbol": "CUPID",
+          "forwardReturn5d": 7.615804678286191
+        },
+        {
+          "date": "2026-01-28",
+          "symbol": "DRREDDY",
+          "forwardReturn5d": 1.447848766615542
+        },
+        {
+          "date": "2026-01-29",
+          "symbol": "BPCL",
+          "forwardReturn5d": 4.114995253745399
+        },
+        {
+          "date": "2026-01-29",
+          "symbol": "CIPLA",
+          "forwardReturn5d": 0.9387557108694143
+        },
+        {
+          "date": "2026-01-29",
+          "symbol": "DRREDDY",
+          "forwardReturn5d": 2.97791374579951
+        },
+        {
+          "date": "2026-01-29",
+          "symbol": "INDUSINDBK",
+          "forwardReturn5d": 1.7809438518699081
+        },
+        {
+          "date": "2026-01-29",
+          "symbol": "JSWSTEEL",
+          "forwardReturn5d": 0.18586253156565655
+        },
+        {
+          "date": "2026-01-29",
+          "symbol": "KOTAKBANK",
+          "forwardReturn5d": -0.8850615786867718
+        },
+        {
+          "date": "2026-01-29",
+          "symbol": "POWERGRID",
+          "forwardReturn5d": 11.074858389065499
+        },
+        {
+          "date": "2026-01-29",
+          "symbol": "SHRIRAMFIN",
+          "forwardReturn5d": -3.011340258170121
+        },
+        {
+          "date": "2026-01-29",
+          "symbol": "ULTRACEMCO",
+          "forwardReturn5d": 0.4403554297397185
+        },
+        {
+          "date": "2026-01-29",
+          "symbol": "WIPRO",
+          "forwardReturn5d": -2.6730623772034967
+        },
+        {
+          "date": "2026-01-30",
+          "symbol": "ASIANPAINT",
+          "forwardReturn5d": -1.1201231571444987
+        },
+        {
+          "date": "2026-01-30",
+          "symbol": "AXISBANK",
+          "forwardReturn5d": -2.1015797077527743
+        },
+        {
+          "date": "2026-01-30",
+          "symbol": "BPCL",
+          "forwardReturn5d": 5.994514706039952
+        },
+        {
+          "date": "2026-01-30",
+          "symbol": "CIPLA",
+          "forwardReturn5d": 0.4531722054380665
+        },
+        {
+          "date": "2026-01-30",
+          "symbol": "INDUSINDBK",
+          "forwardReturn5d": 0.8369601834991611
+        },
+        {
+          "date": "2026-01-30",
+          "symbol": "JSWSTEEL",
+          "forwardReturn5d": 1.7951190974597333
+        },
+        {
+          "date": "2026-01-30",
+          "symbol": "KOTAKBANK",
+          "forwardReturn5d": 3.5171583587048105
+        },
+        {
+          "date": "2026-01-30",
+          "symbol": "SHRIRAMFIN",
+          "forwardReturn5d": -1.715686274509804
+        },
+        {
+          "date": "2026-01-30",
+          "symbol": "TATACONSUM",
+          "forwardReturn5d": 2.240058547241662
+        },
+        {
+          "date": "2026-01-30",
+          "symbol": "ULTRACEMCO",
+          "forwardReturn5d": 0.22057665038600913
+        },
+        {
+          "date": "2026-02-02",
+          "symbol": "ASIANPAINT",
+          "forwardReturn5d": 0.6411283240528726
+        },
+        {
+          "date": "2026-02-02",
+          "symbol": "AXISBANK",
+          "forwardReturn5d": 2.279834114682615
+        },
+        {
+          "date": "2026-02-02",
+          "symbol": "BEL",
+          "forwardReturn5d": -0.40993356536700426
+        },
+        {
+          "date": "2026-02-02",
+          "symbol": "BPCL",
+          "forwardReturn5d": 5.890366748540657
+        },
+        {
+          "date": "2026-02-02",
+          "symbol": "CIPLA",
+          "forwardReturn5d": 2.3559030946351136
+        },
+        {
+          "date": "2026-02-02",
+          "symbol": "INDUSINDBK",
+          "forwardReturn5d": 1.939030421759132
+        },
+        {
+          "date": "2026-02-02",
+          "symbol": "JSWSTEEL",
+          "forwardReturn5d": 3.819217035771937
+        },
+        {
+          "date": "2026-02-02",
+          "symbol": "KOTAKBANK",
+          "forwardReturn5d": 5.046539679055567
+        },
+        {
+          "date": "2026-02-02",
+          "symbol": "LT",
+          "forwardReturn5d": 4.903987107173643
+        },
+        {
+          "date": "2026-02-02",
+          "symbol": "MARUTI",
+          "forwardReturn5d": 4.129588431590657
+        },
+        {
+          "date": "2026-02-02",
+          "symbol": "SBILIFE",
+          "forwardReturn5d": 1.1494252873563218
+        },
+        {
+          "date": "2026-02-02",
+          "symbol": "SHRIRAMFIN",
+          "forwardReturn5d": 10.456291252337904
+        },
+        {
+          "date": "2026-02-02",
+          "symbol": "TATACONSUM",
+          "forwardReturn5d": 3.7142283500105266
+        },
+        {
+          "date": "2026-02-02",
+          "symbol": "ULTRACEMCO",
+          "forwardReturn5d": 4.092540885520543
+        },
+        {
+          "date": "2026-02-03",
+          "symbol": "ASIANPAINT",
+          "forwardReturn5d": -1.3355277140869746
+        },
+        {
+          "date": "2026-02-03",
+          "symbol": "AXISBANK",
+          "forwardReturn5d": 0.03686771995294325
+        },
+        {
+          "date": "2026-02-03",
+          "symbol": "BEL",
+          "forwardReturn5d": -0.3759025784658742
+        },
+        {
+          "date": "2026-02-03",
+          "symbol": "CUPID",
+          "forwardReturn5d": 4.756740010468367
+        },
+        {
+          "date": "2026-02-03",
+          "symbol": "ITC",
+          "forwardReturn5d": 1.5000789804381984
+        },
+        {
+          "date": "2026-02-03",
+          "symbol": "LT",
+          "forwardReturn5d": 3.2237285727886693
+        },
+        {
+          "date": "2026-02-03",
+          "symbol": "MARUTI",
+          "forwardReturn5d": 2.4624543363550266
+        },
+        {
+          "date": "2026-02-03",
+          "symbol": "SBILIFE",
+          "forwardReturn5d": 0.8091540602235093
+        },
+        {
+          "date": "2026-02-03",
+          "symbol": "TATACONSUM",
+          "forwardReturn5d": -0.2769666933156204
+        },
+        {
+          "date": "2026-02-04",
+          "symbol": "BEL",
+          "forwardReturn5d": -0.3756886084248803
+        },
+        {
+          "date": "2026-02-04",
+          "symbol": "CUPID",
+          "forwardReturn5d": 1.5206492972773262
+        },
+        {
+          "date": "2026-02-04",
+          "symbol": "ITC",
+          "forwardReturn5d": 1.4019416316446227
+        },
+        {
+          "date": "2026-02-04",
+          "symbol": "LT",
+          "forwardReturn5d": 2.0381151108892177
+        },
+        {
+          "date": "2026-02-04",
+          "symbol": "MARUTI",
+          "forwardReturn5d": 2.2626235817132243
+        },
+        {
+          "date": "2026-02-04",
+          "symbol": "NESTLEIND",
+          "forwardReturn5d": 0.16114930439964578
+        },
+        {
+          "date": "2026-02-04",
+          "symbol": "NTPC",
+          "forwardReturn5d": 0.32675621702688906
+        },
+        {
+          "date": "2026-02-04",
+          "symbol": "POWERGRID",
+          "forwardReturn5d": 1.7449959975995089
+        },
+        {
+          "date": "2026-02-04",
+          "symbol": "SBILIFE",
+          "forwardReturn5d": -0.7542686345714469
+        },
+        {
+          "date": "2026-02-04",
+          "symbol": "SUNPHARMA",
+          "forwardReturn5d": 0.39309734075944436
+        },
+        {
+          "date": "2026-02-04",
+          "symbol": "WIPRO",
+          "forwardReturn5d": -1.5128134202013188
+        },
+        {
+          "date": "2026-02-05",
+          "symbol": "CUB",
+          "forwardReturn5d": -2.686619231550003
+        },
+        {
+          "date": "2026-02-05",
+          "symbol": "CUPID",
+          "forwardReturn5d": 2.190211035713212
+        },
+        {
+          "date": "2026-02-05",
+          "symbol": "ITC",
+          "forwardReturn5d": 2.3372017133130423
+        },
+        {
+          "date": "2026-02-05",
+          "symbol": "NESTLEIND",
+          "forwardReturn5d": 0.1534330648254699
+        },
+        {
+          "date": "2026-02-05",
+          "symbol": "NTPC",
+          "forwardReturn5d": 0.3405994550408719
+        },
+        {
+          "date": "2026-02-05",
+          "symbol": "POWERGRID",
+          "forwardReturn5d": 1.5724858119895742
+        },
+        {
+          "date": "2026-02-05",
+          "symbol": "SUNPHARMA",
+          "forwardReturn5d": 0.722427405409308
+        },
+        {
+          "date": "2026-02-05",
+          "symbol": "WIPRO",
+          "forwardReturn5d": -6.131367066291035
+        },
+        {
+          "date": "2026-02-06",
+          "symbol": "ADANIENT",
+          "forwardReturn5d": -4.033408580056395
+        },
+        {
+          "date": "2026-02-06",
+          "symbol": "ADANIPORTS",
+          "forwardReturn5d": -2.044235001614537
+        },
+        {
+          "date": "2026-02-06",
+          "symbol": "BAJFINANCE",
+          "forwardReturn5d": 4.385248778410926
+        },
+        {
+          "date": "2026-02-06",
+          "symbol": "CUB",
+          "forwardReturn5d": -2.935152194876991
+        },
+        {
+          "date": "2026-02-06",
+          "symbol": "NESTLEIND",
+          "forwardReturn5d": -1.5882814752289907
+        },
+        {
+          "date": "2026-02-06",
+          "symbol": "NTPC",
+          "forwardReturn5d": -0.5615635834869175
+        },
+        {
+          "date": "2026-02-06",
+          "symbol": "POWERGRID",
+          "forwardReturn5d": -1.8958113724914603
+        },
+        {
+          "date": "2026-02-06",
+          "symbol": "SUNPHARMA",
+          "forwardReturn5d": 0.14158600959408865
+        },
+        {
+          "date": "2026-02-06",
+          "symbol": "WIPRO",
+          "forwardReturn5d": -7.2078730906838455
+        },
+        {
+          "date": "2026-02-09",
+          "symbol": "ADANIENT",
+          "forwardReturn5d": -2.910981607806076
+        },
+        {
+          "date": "2026-02-09",
+          "symbol": "ADANIPORTS",
+          "forwardReturn5d": -1.3831066313173168
+        },
+        {
+          "date": "2026-02-09",
+          "symbol": "BAJAJFINSV",
+          "forwardReturn5d": 1.2990184270945209
+        },
+        {
+          "date": "2026-02-09",
+          "symbol": "BAJFINANCE",
+          "forwardReturn5d": 3.0107282562067255
+        },
+        {
+          "date": "2026-02-09",
+          "symbol": "CUB",
+          "forwardReturn5d": -4.766842189299079
+        },
+        {
+          "date": "2026-02-09",
+          "symbol": "TRENT",
+          "forwardReturn5d": 1.397680470954
+        },
+        {
+          "date": "2026-02-10",
+          "symbol": "ADANIENT",
+          "forwardReturn5d": 0.6506911073164842
+        },
+        {
+          "date": "2026-02-10",
+          "symbol": "ADANIPORTS",
+          "forwardReturn5d": 0.7461309590642412
+        },
+        {
+          "date": "2026-02-10",
+          "symbol": "BAJAJFINSV",
+          "forwardReturn5d": 0.813649578448399
+        },
+        {
+          "date": "2026-02-10",
+          "symbol": "BAJFINANCE",
+          "forwardReturn5d": 5.027967072872413
+        },
+        {
+          "date": "2026-02-10",
+          "symbol": "BHARTIARTL",
+          "forwardReturn5d": 0.4474717735548115
+        },
+        {
+          "date": "2026-02-10",
+          "symbol": "HEROMOTOCO",
+          "forwardReturn5d": -3.067697923003389
+        },
+        {
+          "date": "2026-02-10",
+          "symbol": "TRENT",
+          "forwardReturn5d": -0.29873443511676057
+        },
+        {
+          "date": "2026-02-11",
+          "symbol": "BAJAJFINSV",
+          "forwardReturn5d": 1.657626919400592
+        },
+        {
+          "date": "2026-02-11",
+          "symbol": "BHARTIARTL",
+          "forwardReturn5d": 0.4820870413937941
+        },
+        {
+          "date": "2026-02-11",
+          "symbol": "HEROMOTOCO",
+          "forwardReturn5d": -1.5926088869335682
+        },
+        {
+          "date": "2026-02-11",
+          "symbol": "SBIN",
+          "forwardReturn5d": 3.043367931100706
+        },
+        {
+          "date": "2026-02-11",
+          "symbol": "TATASTEEL",
+          "forwardReturn5d": 0.6936762208244289
+        },
+        {
+          "date": "2026-02-11",
+          "symbol": "TRENT",
+          "forwardReturn5d": -0.75138818844121
+        },
+        {
+          "date": "2026-02-12",
+          "symbol": "BHARTIARTL",
+          "forwardReturn5d": -1.2856800404101514
+        },
+        {
+          "date": "2026-02-12",
+          "symbol": "HEROMOTOCO",
+          "forwardReturn5d": -5.555555555555555
+        },
+        {
+          "date": "2026-02-12",
+          "symbol": "SBIN",
+          "forwardReturn5d": 1.115391352356605
+        },
+        {
+          "date": "2026-02-12",
+          "symbol": "TATASTEEL",
+          "forwardReturn5d": -1.2973893327199806
+        },
+        {
+          "date": "2026-02-13",
+          "symbol": "APOLLOHOSP",
+          "forwardReturn5d": 0.967848856479947
+        },
+        {
+          "date": "2026-02-13",
+          "symbol": "BRITANNIA",
+          "forwardReturn5d": 1.9730791739821083
+        },
+        {
+          "date": "2026-02-13",
+          "symbol": "EICHERMOT",
+          "forwardReturn5d": -1.593304401735896
+        },
+        {
+          "date": "2026-02-13",
+          "symbol": "GRASIM",
+          "forwardReturn5d": -1.9113556499956719
+        },
+        {
+          "date": "2026-02-13",
+          "symbol": "SBIN",
+          "forwardReturn5d": 1.4600367392336295
+        },
+        {
+          "date": "2026-02-13",
+          "symbol": "TATASTEEL",
+          "forwardReturn5d": 2.549467526970613
+        },
+        {
+          "date": "2026-02-13",
+          "symbol": "TITAN",
+          "forwardReturn5d": 1.3686759274036855
+        },
+        {
+          "date": "2026-02-16",
+          "symbol": "APOLLOHOSP",
+          "forwardReturn5d": 0.9845103701758993
+        },
+        {
+          "date": "2026-02-16",
+          "symbol": "BRITANNIA",
+          "forwardReturn5d": 0.27022600720602685
+        },
+        {
+          "date": "2026-02-16",
+          "symbol": "DIVISLAB",
+          "forwardReturn5d": 2.3416537929913
+        },
+        {
+          "date": "2026-02-16",
+          "symbol": "EICHERMOT",
+          "forwardReturn5d": 0.3495412271393796
+        },
+        {
+          "date": "2026-02-16",
+          "symbol": "GRASIM",
+          "forwardReturn5d": -1.3492652688895503
+        },
+        {
+          "date": "2026-02-16",
+          "symbol": "M&M",
+          "forwardReturn5d": -1.7836240814467104
+        },
+        {
+          "date": "2026-02-16",
+          "symbol": "TITAN",
+          "forwardReturn5d": 2.190813315079378
+        },
+        {
+          "date": "2026-02-17",
+          "symbol": "APOLLOHOSP",
+          "forwardReturn5d": 1.5654804972702756
+        },
+        {
+          "date": "2026-02-17",
+          "symbol": "BRITANNIA",
+          "forwardReturn5d": 0.2766251728907331
+        },
+        {
+          "date": "2026-02-17",
+          "symbol": "COALINDIA",
+          "forwardReturn5d": 2.2298718268921007
+        },
+        {
+          "date": "2026-02-17",
+          "symbol": "DIVISLAB",
+          "forwardReturn5d": 1.098989898989899
+        },
+        {
+          "date": "2026-02-17",
+          "symbol": "EICHERMOT",
+          "forwardReturn5d": -1.3192283758556316
+        },
+        {
+          "date": "2026-02-17",
+          "symbol": "GRASIM",
+          "forwardReturn5d": -0.7274808380242556
+        },
+        {
+          "date": "2026-02-17",
+          "symbol": "HINDALCO",
+          "forwardReturn5d": 3.679361970372063
+        },
+        {
+          "date": "2026-02-17",
+          "symbol": "HINDUNILVR",
+          "forwardReturn5d": 2.0023374064966135
+        },
+        {
+          "date": "2026-02-17",
+          "symbol": "M&M",
+          "forwardReturn5d": -1.6049524470843801
+        },
+        {
+          "date": "2026-02-17",
+          "symbol": "ONGC",
+          "forwardReturn5d": 1.7104998315555457
+        },
+        {
+          "date": "2026-02-17",
+          "symbol": "TITAN",
+          "forwardReturn5d": 1.3714497921715711
+        },
+        {
+          "date": "2026-02-18",
+          "symbol": "COALINDIA",
+          "forwardReturn5d": 4.928231125242973
+        },
+        {
+          "date": "2026-02-18",
+          "symbol": "DIVISLAB",
+          "forwardReturn5d": 1.7824460889631573
+        },
+        {
+          "date": "2026-02-18",
+          "symbol": "HINDALCO",
+          "forwardReturn5d": 4.2424269573603
+        },
+        {
+          "date": "2026-02-18",
+          "symbol": "M&M",
+          "forwardReturn5d": -1.1103229336319218
+        },
+        {
+          "date": "2026-02-18",
+          "symbol": "ONGC",
+          "forwardReturn5d": 4.856389193917291
+        },
+        {
+          "date": "2026-02-19",
+          "symbol": "COALINDIA",
+          "forwardReturn5d": 4.169171298325519
+        },
+        {
+          "date": "2026-02-19",
+          "symbol": "HINDALCO",
+          "forwardReturn5d": 3.9363951215008317
+        },
+        {
+          "date": "2026-02-19",
+          "symbol": "ONGC",
+          "forwardReturn5d": 1.9843481988517213
+        },
+        {
+          "date": "2026-02-23",
+          "symbol": "HINDUNILVR",
+          "forwardReturn5d": -1.0573806480812777
+        },
+        {
+          "date": "2026-02-24",
+          "symbol": "HINDUNILVR",
+          "forwardReturn5d": -4.12533048416357
+        },
+        {
+          "date": "2026-02-25",
+          "symbol": "HINDUNILVR",
+          "forwardReturn5d": -5.048629722264199
+        },
+        {
+          "date": "2026-03-02",
+          "symbol": "SBILIFE",
+          "forwardReturn5d": -3.3707313082307304
+        },
+        {
+          "date": "2026-03-04",
+          "symbol": "SBILIFE",
+          "forwardReturn5d": 0.4143789547895337
+        },
+        {
+          "date": "2026-03-05",
+          "symbol": "ICICIBANK",
+          "forwardReturn5d": -6.710369565719749
+        },
+        {
+          "date": "2026-03-05",
+          "symbol": "SBILIFE",
+          "forwardReturn5d": -0.2879164825674807
+        },
+        {
+          "date": "2026-03-05",
+          "symbol": "TCS",
+          "forwardReturn5d": -5.289287416694398
+        },
+        {
+          "date": "2026-03-06",
+          "symbol": "ICICIBANK",
+          "forwardReturn5d": -4.461700509871718
+        },
+        {
+          "date": "2026-03-06",
+          "symbol": "TCS",
+          "forwardReturn5d": -5.751489366576523
+        },
+        {
+          "date": "2026-03-09",
+          "symbol": "ICICIBANK",
+          "forwardReturn5d": -0.43022527338583644
+        },
+        {
+          "date": "2026-03-09",
+          "symbol": "TCS",
+          "forwardReturn5d": -4.676741146593536
+        }
+      ],
+      "note": "Window 2025-12-12 – 2026-03-09: 51 symbols, 182 row-days. Dec–Mar period includes Q3 FY26 results season for many NSE names; inspect top-|return| rows for single-name dominance vs broad seasonality."
+    },
+    "icByFoldRawVsWinsorized": [
+      {
+        "fold": 1,
+        "testStart": "2025-03-21",
+        "testEnd": "2025-06-19",
+        "nQualifyingDays": 51,
+        "nRows": 198,
+        "meanICRaw": 0.11325499896928468,
+        "meanICWinsorized": 0.11597608740465881,
+        "dailyIcStdRaw": 0.43633634251612596,
+        "dailyIcStdWinsorized": 0.4393173840877807
+      },
+      {
+        "fold": 2,
+        "testStart": "2025-06-20",
+        "testEnd": "2025-09-15",
+        "nQualifyingDays": 39,
+        "nRows": 181,
+        "meanICRaw": 0.05591723091723092,
+        "meanICWinsorized": 0.08038813038813039,
+        "dailyIcStdRaw": 0.3588106452894188,
+        "dailyIcStdWinsorized": 0.36499985695215603
+      },
+      {
+        "fold": 3,
+        "testStart": "2025-09-16",
+        "testEnd": "2025-12-11",
+        "nQualifyingDays": 44,
+        "nRows": 192,
+        "meanICRaw": 0.13813003989474576,
+        "meanICWinsorized": 0.13098718275188864,
+        "dailyIcStdRaw": 0.36021744658194443,
+        "dailyIcStdWinsorized": 0.3655242366072656
+      },
+      {
+        "fold": 4,
+        "testStart": "2025-12-12",
+        "testEnd": "2026-03-10",
+        "nQualifyingDays": 45,
+        "nRows": 182,
+        "meanICRaw": 0.36010864135864135,
+        "meanICWinsorized": 0.35818556443556443,
+        "dailyIcStdRaw": 0.2931895583650924,
+        "dailyIcStdWinsorized": 0.29268802975789854
+      },
+      {
+        "fold": 5,
+        "testStart": "2026-03-11",
+        "testEnd": "2026-06-08",
+        "nQualifyingDays": 55,
+        "nRows": 185,
+        "meanICRaw": 0.01339285714285715,
+        "meanICWinsorized": 0.01339285714285715,
+        "dailyIcStdRaw": 0.4695802108820207,
+        "dailyIcStdWinsorized": 0.4695802108820207
+      },
+      {
+        "fold": 6,
+        "testStart": "2026-06-09",
+        "testEnd": "2026-06-26",
+        "nQualifyingDays": 9,
+        "nRows": 10,
+        "meanICRaw": 0,
+        "meanICWinsorized": 0,
+        "dailyIcStdRaw": 0,
+        "dailyIcStdWinsorized": 0
+      }
+    ],
+    "pooledRaw": {
+      "meanIC": 0.13293999661988715,
+      "icIR": 0.33259815402328385,
+      "tStat": 3.0843883927180538,
+      "nDays": 86
+    },
+    "pooledWinsorized": {
+      "meanIC": 0.1371226356862471,
+      "icIR": 0.3417696877952834,
+      "tStat": 3.1694416979381326,
+      "nDays": 86
+    },
+    "acceptanceRaw": {
+      "pass": true,
+      "reasons": [],
+      "tStatPass": true,
+      "signFlipPass": true,
+      "signFlips": 0,
+      "maxAllowedSignFlips": 1,
+      "significance": {
+        "meanIC": 0.13293999661988715,
+        "icIR": 0.33259815402328385,
+        "tStat": 3.0843883927180538,
+        "nDays": 86
+      }
+    },
+    "acceptanceWinsorized": {
+      "pass": true,
+      "reasons": [],
+      "tStatPass": true,
+      "signFlipPass": true,
+      "signFlips": 0,
+      "maxAllowedSignFlips": 1,
+      "significance": {
+        "meanIC": 0.1371226356862471,
+        "icIR": 0.3417696877952834,
+        "tStat": 3.1694416979381326,
+        "nDays": 86
+      }
+    },
+    "interpretation": "Fold 4 IC stable after winsorizing (+0.360 → +0.358). Effect appears broad-based across qualifying days; raw pooled IC (t=3.08) is trustworthy for overlay design.",
+    "overlayIcBasis": "raw"
+  },
+  "overlayEval": {
+    "folds": [
+      {
+        "fold": 1,
+        "testStart": "2025-03-21",
+        "testEnd": "2025-06-19",
+        "nNearEarningsRows": 198,
+        "nNearEarningsTrainRows": 9,
+        "meanICBaseOnly": 0.0738301381158524,
+        "meanICBasePlusOverlay": 0.0738301381158524,
+        "meanICFullBaseOnly": -0.04316713623039927,
+        "meanICFullBasePlusOverlay": -0.04316713623039927,
+        "overlayShrinkage": 0
+      },
+      {
+        "fold": 2,
+        "testStart": "2025-06-20",
+        "testEnd": "2025-09-15",
+        "nNearEarningsRows": 181,
+        "nNearEarningsTrainRows": 206,
+        "meanICBaseOnly": -0.19324009324009322,
+        "meanICBasePlusOverlay": -0.1221694971694972,
+        "meanICFullBaseOnly": -0.008894675431856347,
+        "meanICFullBasePlusOverlay": -0.0042531090810780155,
+        "overlayShrinkage": 0.265
+      },
+      {
+        "fold": 3,
+        "testStart": "2025-09-16",
+        "testEnd": "2025-12-11",
+        "nNearEarningsRows": 192,
+        "nNearEarningsTrainRows": 390,
+        "meanICBaseOnly": 0.0563644851880146,
+        "meanICBasePlusOverlay": 0.21013757484345721,
+        "meanICFullBaseOnly": 0.013173397080167338,
+        "meanICFullBasePlusOverlay": 0.020969577961808813,
+        "overlayShrinkage": 0.725
+      },
+      {
+        "fold": 4,
+        "testStart": "2025-12-12",
+        "testEnd": "2026-03-10",
+        "nNearEarningsRows": 182,
+        "nNearEarningsTrainRows": 580,
+        "meanICBaseOnly": -0.15276806526806525,
+        "meanICBasePlusOverlay": 0.21153325840825843,
+        "meanICFullBaseOnly": 0.024572412419249273,
+        "meanICFullBasePlusOverlay": 0.033738865647855644,
+        "overlayShrinkage": 1
+      },
+      {
+        "fold": 5,
+        "testStart": "2026-03-11",
+        "testEnd": "2026-06-08",
+        "nNearEarningsRows": 185,
+        "nNearEarningsTrainRows": 756,
+        "meanICBaseOnly": 0.24925595238095238,
+        "meanICBasePlusOverlay": 0.05922619047619049,
+        "meanICFullBaseOnly": -0.033136657275392015,
+        "meanICFullBasePlusOverlay": -0.0492568371325308,
+        "overlayShrinkage": 1
+      },
+      {
+        "fold": 6,
+        "testStart": "2026-06-09",
+        "testEnd": "2026-06-26",
+        "nNearEarningsRows": 10,
+        "nNearEarningsTrainRows": 943,
+        "meanICBaseOnly": 0,
+        "meanICBasePlusOverlay": 0,
+        "meanICFullBaseOnly": -0.09409032698710836,
+        "meanICFullBasePlusOverlay": -0.09424278274444756,
+        "overlayShrinkage": 1
+      }
+    ],
+    "nearEarningsBaseOnly": {
+      "meanIC": 0.005364938299274832,
+      "icIR": 0.012807787604126333,
+      "tStat": 0.11877453601200658,
+      "nDays": 86
+    },
+    "nearEarningsBasePlusOverlay": {
+      "meanIC": 0.0794836832114534,
+      "icIR": 0.1939309397273214,
+      "tStat": 1.7984415495041501,
+      "nDays": 86
+    },
+    "fullBaseOnly": {
+      "meanIC": -0.013262497274246436,
+      "icIR": -0.0785899163125691,
+      "tStat": -1.3926168651316904,
+      "nDays": 314
+    },
+    "fullBasePlusOverlay": {
+      "meanIC": -0.01222139263848052,
+      "icIR": -0.07526985939701365,
+      "tStat": -1.3337853066985361,
+      "nDays": 314
+    },
+    "acceptance": {
+      "pass": false,
+      "reasons": [
+        "|t-stat|=1.80 ≤ 2",
+        "sign flips=2 > 1"
+      ],
+      "tStatPass": false,
+      "signFlipPass": false,
+      "signFlips": 2,
+      "maxAllowedSignFlips": 1,
+      "significance": {
+        "meanIC": 0.0794836832114534,
+        "icIR": 0.1939309397273214,
+        "tStat": 1.7984415495041501,
+        "nDays": 86
+      }
+    },
+    "beatsBaseOnly": true,
+    "fullNotWorse": true,
+    "pass": false,
+    "adjustmentCap": 0.15,
+    "finalOverlay": {
+      "slope": 0.08940254661724126,
+      "intercept": -0.004875827361626322,
+      "trainedOnRows": 959,
+      "trainedOnICStat": {
+        "meanIC": 0.13293999661988715,
+        "tStat": 3.0843883927180538
+      },
+      "shrinkageMinRows": 100,
+      "shrinkageFullRows": 500,
+      "adjustmentCap": 0.15
+    }
+  },
+  "coreBaselineIC": -0.013,
+  "ridgeFeatureKeys": [
+    "momentum5d",
+    "momentum20d",
+    "return1d",
+    "volatility20d",
+    "volumeZScore",
+    "avgSentiment7d",
+    "sentimentDelta",
+    "newsCount7d",
+    "newsVolumeZ",
+    "sentimentMlCoverage",
+    "trendStrength",
+    "momentumTrendAlign",
+    "spikeShare"
+  ],
+  "enableEarningsInRidge": false,
+  "enableEarningsOverlay": false,
+  "verdict": "PARTIAL — standalone signal passes but overlay eval did not meet bar",
+  "nextStep": "Review overlay fold table; tune shrinkage or investigate fold 4 outliers"
+}

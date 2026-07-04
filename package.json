@@ -11,11 +11,15 @@
     "db:push": "drizzle-kit push",
     "db:seed": "tsx scripts/seed.ts",
     "ingest": "tsx scripts/ingest.ts",
+    "ingest:earnings": "tsx scripts/ingest-earnings.ts",
     "eval:signals": "tsx scripts/eval-signals.ts",
     "eval:sentiment": "tsx scripts/eval-sentiment.ts",
     "rescore-sentiment": "tsx scripts/rescore-sentiment.ts",
     "train:ranker": "tsx scripts/train-ranker.ts",
     "eval:ranker": "tsx scripts/eval-ranker.ts",
+    "audit:walk-forward": "tsx scripts/audit-walk-forward.ts",
+    "eval:a2-earnings": "tsx scripts/eval-a2-earnings.ts",
+    "eval:feature-group": "tsx scripts/eval-feature-group.ts",
     "show:ranks": "tsx scripts/show-ranks.ts"
   },
   "dependencies": {
